@@ -1,11 +1,66 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    
-</body>
-</html>
+{% extends "layout.html" %}
+
+{% block title %}Sign Up{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="../static/css/register.css">
+
+    <div class="registratiom-form">
+        <form method="POST" action="{{ url_for('main.register') }}">
+            {{ form.csrf_token }}
+            <div class="registration">
+                <p>
+                    {{ form.firstname.label }} <br><br>
+                    {{ form.firstname(size=32) }}
+                    {% for error in form.firstname.errors %}
+                        <span style="color: red;">[{{ error }}]</span>
+                    {% endfor %}
+                </p>
+
+                <p>
+                    {{ form.lastname.label }}<br><br>
+                    {{ form.lastname(size=32) }}
+                    {% for error in form.lastname.errors %}
+                        <span style="color: red;">[{{ error }}]</span>
+                    {% endfor %}
+                </p>
+
+                <p>
+                    {{ form.username.label }}<br><br>
+                    {{ form.username(size=32) }}
+                    {% for error in form.username.errors %}
+                        <span style="color: red;">[{{ error }}]</span>
+                    {% endfor %}
+                </p>
+
+                <p>
+                    {{ form.email.label }}<br><br>
+                    {{ form.email(size=32) }}
+                    {% for error in form.email.errors %}
+                        <span style="color: red;">[{{ error }}]</span>
+                    {% endfor %}
+                </p>
+
+                <p>
+                    {{ form.password.label }}<br><br>
+                    <p class="email">{{ form.password(size=32) }}</p>
+                    {% for error in form.password.errors %}
+                        <span style="color: red;">[{{ error }}]</span>
+                    {% endfor %}
+                </p>
+
+                <p>
+                    {{ form.confirm_password.label }}<br><br>
+                    {{ form.confirm_password(size=32) }}
+                    {% for error in form.confirm_password.errors %}
+                        <span style="color: red;">[{{ error }}]</span>
+                    {% endfor %}
+                </p>
+
+                <p id="submit">
+                    {{ form.submit(class="btn btn-primary") }}
+                </p>
+            </div>
+        </form>
+    </div>
+{% endblock %}

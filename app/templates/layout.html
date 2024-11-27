@@ -1,3 +1,32 @@
-{% block_content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}My Website{% endblock %}</title>
+    <link rel="stylesheet" href="../static/css/layout.css">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('main.homepage') }}">Home</a></li>
+                <li><a href="{{ url_for('main.register') }}">Sign Up</a></li>
+                <li><a href="{{ url_for('main.login') }}">Log In</a></li>
+            </ul>
+        </nav>
+    </header>
 
-{% end_block_content %}
+    <!-- Main Content -->
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2024 Predictive Analytics. All Rights Reserved.</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,12 @@
+.registration {
+    margin-left: 40%;
+    border-radius: 10px;
+}
+
+.registration #submit {
+    margin-left: 50px;
+}
+
+.registration .email {
+    border-radius: 70px;
+}

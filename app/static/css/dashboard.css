@@ -3,6 +3,9 @@ body {
     padding: 0;
     font-family: Arial, sans-serif;
     height: 100vh;
+    background-position: right top;
+    background-attachment: fixed;
+    background-size: auto;
 }
 header {
     background-color: gray;
@@ -70,4 +73,53 @@ button:focus {
     background-position: center;
     margin-top:0;
     height: calc(100vh - 60px);
+}
+
+div h1 {
+    position: fixed;
+}
+
+.profile-container {
+    display: flex;
+    align-items: center;
+    margin: 20px;
+}
+
+.profile {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: #ccc;
+    border: 2px solid #777;
+    margin-right: 10px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.profile::after {
+    content: '📷'; /* Placeholder icon */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+}
+
+.file-input {
+    display: none; /* Hide the default file input */
+}
+
+.profile:hover {
+    background-color: #e0e0e0; /* Change color on hover */
+}
+
+.profile:hover::after {
+    content: 'Click to upload'; /* Text overlay on hover */
+    font-size: 12px;
+    color: #555;
+    position: absolute;
+    bottom: 10%;
+    left: 50%;
+    transform: translateX(-50%);
 }

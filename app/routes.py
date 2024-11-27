@@ -44,7 +44,7 @@ def login():
     form = LoginForm()
 
     # Simulating stored user credentials (use a database in real applications)
-    registered_email = "test@example.com"
+    registered_email = "ndegwaanthony300@gmail.com"
     registered_password_hash = bcrypt.generate_password_hash("password123").decode("utf-8")
 
     if form.validate_on_submit():

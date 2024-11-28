@@ -9,8 +9,8 @@ bcrypt = Bcrypt()
 
 
 @main_bp.route('/')
-def homepage():
-    return render_template('dashboard.html')
+def landing_page():
+    return render_template('homepage.html')
 
 
 @main_bp.route("/signup", methods=["POST", "GET"])
@@ -32,7 +32,7 @@ def register():
         # Here you would typically save the user to the database
         # Example: User.create(username=username_reg, email=email_reg, password=password_reg_ecrpt)
 
-        return render_template("dashboard.html")
+        return render_template("homepage.html")
     else:
         err = form.errors
         print(err)
@@ -55,7 +55,7 @@ def login():
         if email_log == registered_email and bcrypt.check_password_hash(registered_password_hash, password_log):
             # Successful login
             session['user_email'] = email_log
-            return redirect(url_for('main.homepage'))
+            return redirect(url_for('main.landing_page'))
         else:
             # Invalid credentials
             return render_template("login.html", form=form, error="Invalid email or password")

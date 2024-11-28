@@ -5,13 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}My Website{% endblock %}</title>
     <link rel="stylesheet" href="../static/css/layout.css">
+    <link rel="icon" href="../static/images/logo.png" type="image/png">
 </head>
 <body>
     <!-- Header -->
     <header>
         <nav>
             <ul>
-                <li><a href="{{ url_for('main.homepage') }}">Home</a></li>
+                <li><a href="{{ url_for('main.landing_page') }}">Home</a></li>
                 <li><a href="{{ url_for('main.register') }}">Sign Up</a></li>
                 <li><a href="{{ url_for('main.login') }}">Log In</a></li>
             </ul>

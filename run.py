@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 
 @st.cache_data
 def load_data():
-  df = pd.read_excel('data/Online-Retail.xlsx')
+  df = pd.read_csv('data/New-Online_Retail.csv')
   return df
 
 df = load_data()

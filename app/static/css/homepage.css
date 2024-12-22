@@ -1,0 +1,49 @@
+/* Center the file upload container */
+.file-upload-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh; /* Full viewport height */
+    background-color: #f8f9fa; /* Optional: Light background color */
+}
+
+/* Style the file upload element */
+.file-upload {
+    text-align: center;
+    padding: 2rem;
+    border: 2px dashed #6c757d; /* Dashed border for file upload area */
+    border-radius: 8px;
+    background-color: #ffffff; /* White background */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+}
+
+/* Label for the file input */
+.file-upload label {
+    font-size: 1.2rem;
+    color: #343a40; /* Dark text color */
+    margin-bottom: 1rem;
+    display: block;
+    font-weight: bold;
+}
+
+/* File input field styling */
+.file-upload input[type="file"] {
+    font-size: 1rem;
+    padding: 0.5rem;
+    cursor: pointer;
+    margin-top: 1rem;
+}
+
+/* Add hover effects */
+.file-upload input[type="file"]:hover {
+    background-color: #e9ecef; /* Light hover background */
+    border-color: #adb5bd; /* Subtle hover border color */
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .file-upload {
+        width: 90%; /* Reduce width for smaller screens */
+        padding: 1.5rem;
+    }
+}

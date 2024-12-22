@@ -1,7 +1,5 @@
 # Web Development
 Flask==2.3.3             # Core web framework for building web applications
-flask_mysqldb==1.0.1
-Werkzeug==2.3.7
 Flask-SQLAlchemy==3.0.5  # SQLAlchemy integration with Flask for database ORM
 Flask-WTF==1.1.1         # Integration of WTForms for form handling and validation in Flask
 Flask-Migrate==4.0.4     # Database migration tool for Flask using Alembic
@@ -23,33 +21,37 @@ gunicorn==21.0.1         # WSGI HTTP Server for deploying Flask apps in producti
 pymongo==4.3.3           # Python driver for MongoDB, for interacting with NoSQL databases
 
 # Statistical Libraries
-numpy==1.23.5           # Numerical computations and array operations
-pandas==1.5.3           # Data manipulation and analysis
-scikit-learn==1.2.2     # Machine learning library for modeling and preprocessing
-scipy==1.10.1           # Scientific computing and optimization
-matplotlib==3.6.3       # Data visualization (static plots)
-seaborn==0.12.2         # Statistical data visualization (built on Matplotlib)
-statsmodels==0.14.0     # Statistical modeling and hypothesis testing
+numpy>=1.23,<1.28        # Numerical computations and array operations
+pandas>=1.3, <2.0.0            # Data manipulation and analysis
+scikit-learn==1.3.1      # Machine learning library for modeling and preprocessing
+scipy==1.11.3            # Scientific computing and optimization
+matplotlib==3.8.2        # Data visualization (static plots)
+seaborn==0.12.2          # Statistical data visualization (built on Matplotlib)
+statsmodels==0.14.0      # Statistical modeling and hypothesis testing
+
+
+# pandas>=1.3, <2.0.0  # Compatible with pycaret
 
 # Machine Learning
-xgboost==1.7.6          # Gradient boosting framework for predictive modeling
-lightgbm==3.3.5         # Optimized gradient boosting framework for large datasets
-tensorflow==2.13.0      # Deep learning framework by Google
-# keras==2.13.0           # High-level deep learning API (part of TensorFlow)
-torch==2.0.1            # Deep learning framework by Facebook
-transformers==4.35.0    # NLP models and transformer architectures (Hugging Face)
+xgboost==1.7.6           # Gradient boosting framework for predictive modeling
+lightgbm==4.0.0          # Optimized gradient boosting framework for large datasets
+# catboost==1.2.7          # Gradient boosting library for handling categorical data
+tensorflow==2.14.0       # Deep learning framework by Google
+keras==2.14.0            # High-level deep learning API (part of TensorFlow)
+torch==2.1.0             # Deep learning framework by Facebook
+transformers==4.35.0     # NLP models and transformer architectures (Hugging Face)
 
 # Feature Engineering and Model Analysis
 category_encoders==2.6.1 # Encodes categorical data for machine learning models
 feature-engine==1.6.0    # Tools for feature engineering and preprocessing
-shap==0.41.0             # Explainable AI library for feature impact analysis
+shap==0.42.1             # Explainable AI library for feature impact analysis
 eli5==0.13.0             # Tools for explaining and debugging machine learning models
 imbalanced-learn==0.10.1 # Tools for handling imbalanced datasets in machine learning
 
 # Data Cleaning and Visualization
 missingno==0.5.2         # Visualize and handle missing data
 pyjanitor==0.30.0        # Simplifies data cleaning and manipulation workflows
-plotly==5.16.0           # Interactive data visualization library
+plotly==5.17.0           # Interactive data visualization library
 altair==5.0.1            # Declarative statistical visualization library
 
 # Workflow Optimization

@@ -8,9 +8,38 @@
 
 {% block content %}
 <div class="file-upload-container">
-    <div class="file-upload">
-        <label for="file-input">Upload a file:</label>
-        <input type="file" id="file-input" accept=".csv, .xlsx">
+    <div>
+        <form action="{{ url_for('main.upload_data') }}" method="POST" enctype="multipart/form-data">
+            {{ csrf_token() }}
+            <label for="file">Upload CSV or Excel file:</label>
+            <input type="file" name="file" accept=".csv, .xlsx" required>
+            <button type="submit">Upload</button>
+        </form>
     </div>
 </div>
+
+<h2>Uploaded Data:</h2>
+{% if data %}
+    <table border="1">
+        <thead>
+            <tr>
+                {% for header in data[0] %}
+                    <th>{{ header }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data[1:] %}
+                <tr>
+                    {% for cell in row %}
+                        <td>{{ cell }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No data uploaded yet.</p>
+{% endif %}
+
 {% endblock %}

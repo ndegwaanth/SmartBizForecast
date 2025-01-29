@@ -1,0 +1,50 @@
+{% extends "layout.html" %}
+
+{% block title %}Predictions{% endblock %}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+
+
+{% block content %}
+
+<div class="container mt-5">
+        <h1 class="mb-4">Choose Your Model Options</h1>
+        <form method="POST" action="{{ url_for('main.predictions') }}">
+            <!-- CSRF Token -->
+            {{ form.hidden_tag() }}
+            
+            <!-- Target Variable -->
+            <div class="mb-3">
+                <label for="target" class="form-label">{{ form.target.label }}</label>
+                {{ form.target(class="form-select") }}
+                {% for error in form.target.errors %}
+                    <div class="text-danger">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <!-- Predictors -->
+            <div class="mb-3">
+                <label for="predictors" class="form-label">{{ form.predictors.label }}</label>
+                {{ form.predictors(class="form-control") }}
+                {% for error in form.predictors.errors %}
+                    <div class="text-danger">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <!-- Model Selection -->
+            <div class="mb-3">
+                <label for="model_selection" class="form-label">{{ form.model_selection.label }}</label>
+                {{ form.model_selection(class="form-select") }}
+                {% for error in form.model_selection.errors %}
+                    <div class="text-danger">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <!-- Submit Button -->
+            <div class="mb-3">
+                {{ form.submit(class="btn btn-primary") }}
+            </div>
+        </form>
+    </div>
+
+{% endblock %}

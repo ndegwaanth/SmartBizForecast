@@ -1,9 +1,13 @@
-from flask import session, render_template, redirect, request, Blueprint, url_for
-from .forms import Registration, LoginForm
+from .forms import Registration, LoginForm, ModelForm
 from flask_bcrypt import Bcrypt
 from flask_mysqldb import MySQL
 import secrets
 from . import mysql
+from flask import session, render_template, redirect, request, Blueprint, url_for, flash
+import pandas as pd
+from werkzeug.utils import secure_filename
+import os
+
 
 key = secrets.token_hex(64)
 
@@ -88,3 +92,69 @@ def login():
 @main_bp.route('/homepage')
 def homepage():
     return render_template('homepage.html')
+
+
+# Directory where you will store the uploaded files
+UPLOAD_FOLDER = 'data/user'
+ALLOWED_EXTENSIONS = {'csv', 'xlsx'}
+
+# Ensure the upload folder exists
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+# Helper function to check allowed file extensions
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@main_bp.route('/upload', methods=['POST', 'GET'])
+def upload_data():
+    if request.method == 'POST':
+        file = request.files.get('file')
+        
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(UPLOAD_FOLDER, filename)
+            file.save(file_path)
+
+            # Process the file
+            if filename.endswith('.csv'):
+                data = pd.read_csv(file_path)
+            elif filename.endswith('.xlsx'):
+                data = pd.read_excel(file_path)
+
+            # Store column names in session
+            session['uploaded_data'] = {"columns": data.columns.tolist()}
+
+            flash("File uploaded successfully!", "success")
+            return redirect(url_for('main.predictions'))
+        else:
+            flash("Invalid file format. Please upload a .csv or .xlsx file.", "error")
+            return redirect(url_for('main.upload_data'))
+
+    return render_template('homepage.html')
+
+
+@main_bp.route("/Predictions", methods=['GET', 'POST'])
+def predictions():
+    form = ModelForm()
+    
+    # Check if data has been uploaded (stored in session or elsewhere)
+    uploaded_data = session.get("uploaded_data")  # Assume data is stored in session
+    if uploaded_data:
+        columns = uploaded_data["columns"]  # Example structure: {"columns": ["col1", "col2", ...]}
+        form.target.choices = [(col, col) for col in columns]
+        form.predictors.choices = [(col, col) for col in columns]
+    else:
+        form.target.choices = []
+        form.predictors.choices = []
+    
+    if form.validate_on_submit():
+        target = form.target.data
+        predictors = form.predictors.data
+        model_selection = form.model_selection.data
+        # Handle prediction logic here
+        
+        flash(f"Target: {target}, Predictors: {predictors}, Model: {model_selection}")
+        return redirect(url_for("main.predictions"))
+
+    return render_template('prediction.html', form=form)

@@ -18,7 +18,7 @@ class User(db.Model):
         """Checks the hashed password against the provided one."""
         return check_password_hash(self.password_hash, password)
 
-class Client(UserMixin):
+class User(UserMixin):
     def __init__(self, user_dict):
         # The user_dict is the dictionary returned from MongoDB for the user
         self.id = str(user_dict['_id'])  # User ID stored as string

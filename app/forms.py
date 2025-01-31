@@ -25,13 +25,13 @@ class LoginForm(FlaskForm):
 #     # Dropdown for target variable
 #     target = SelectField(
 #         "Choose your preferred Target Variable",
-#         choices=[(col, col) for col in datacolumns]  # Each choice must be a tuple # type: ignore
+#         choices=[(col, col) for col in data]
 #     )
 
 #     # Multiple selection for predictors
 #     predictors = SelectMultipleField(
 #         "Select your predictors",
-#         choices=[(col, col) for col in columns],  # Each choice must be a tuple # type: ignore
+#         choices=[(col, col) for col in data],
 #         validators=[DataRequired()]
 #     )
 

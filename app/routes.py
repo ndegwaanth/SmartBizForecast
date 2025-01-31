@@ -1,4 +1,4 @@
-from .forms import Registration, LoginForm, ModelForm
+from .forms import Registration, LoginForm
 from flask_bcrypt import Bcrypt
 from flask_mysqldb import MySQL
 import secrets
@@ -132,29 +132,3 @@ def upload_data():
             return redirect(url_for('main.upload_data'))
 
     return render_template('homepage.html')
-
-
-@main_bp.route("/Predictions", methods=['GET', 'POST'])
-def predictions():
-    form = ModelForm()
-    
-    # Check if data has been uploaded (stored in session or elsewhere)
-    uploaded_data = session.get("uploaded_data")  # Assume data is stored in session
-    if uploaded_data:
-        columns = uploaded_data["columns"]  # Example structure: {"columns": ["col1", "col2", ...]}
-        form.target.choices = [(col, col) for col in columns]
-        form.predictors.choices = [(col, col) for col in columns]
-    else:
-        form.target.choices = []
-        form.predictors.choices = []
-    
-    if form.validate_on_submit():
-        target = form.target.data
-        predictors = form.predictors.data
-        model_selection = form.model_selection.data
-        # Handle prediction logic here
-        
-        flash(f"Target: {target}, Predictors: {predictors}, Model: {model_selection}")
-        return redirect(url_for("main.predictions"))
-
-    return render_template('prediction.html', form=form)

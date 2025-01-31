@@ -1,130 +1,126 @@
 body {
     margin: 0;
-    padding: 0;
     font-family: Arial, sans-serif;
-    height: 100vh;
-    background-position: right top;
-    background-attachment: fixed;
-    background-size: auto;
 }
+
 header {
-    background-color: blue;
-    width: 100%;
-    height: 40px;
-    position: fixed;
+    background-color: #1f1f1f;
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
 }
 nav {
-    background-color: aqua;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    z-index: 10;
-    margin-right: 20px;
-    margin-top: 40px;
-    position: fixed;
+    padding: 15px 20px;
+    background-color: #282828;
+    color: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
-
-ul {
-    list-style-type: none;
+.list ul {
+    list-style: none;
     margin: 0;
     padding: 0;
     display: flex;
     gap: 20px;
-    justify-items: center;
 }
-
-ul li {
+.list ul li {
     cursor: pointer;
-    font-size: 1.2rem;
-    font-weight: bold;
+    font-size: 16px;
+    font-weight: 500;
+    color: white;
 }
-
-ul li:hover {
-    color: #007BFF; /* Bootstrap default blue color */
+.list ul li:hover {
+    color: #ffa500;
 }
-
-.list ul li{
-    align-items: center;
+nav div:last-child {
+    display: flex;
+    gap: 10px;
 }
-
-button {
-    background-color: #007BFF;
+nav button {
+    background-color: #ffa500;
     color: white;
     border: none;
-    padding: 10px 20px;
-    margin-left: 10px;
-    font-size: 1rem;
+    padding: 10px 15px;
     border-radius: 5px;
     cursor: pointer;
-    margin-top: 5px;
-    margin-bottom: 5px;
-    margin-right: 5px;
+    font-size: 14px;
+    transition: background-color 0.3s;
 }
-
-button:hover {
-    background-color: #0056b3;
+nav button:hover {
+    background-color: #ff7a00;
 }
-
-button:focus {
-    outline: none;
+nav button a {
+    text-decoration: none;
+    color: white;
 }
 #background_img {
+    height: 400px;
     background-image: url("../images/istockphoto-1500820004-1024x1024.jpg");
-    background-repeat: no-repeat;
-    background-attachment: fixed;
     background-size: cover;
     background-position: center;
-    margin-top:0;
-    height: calc(100vh - 60px);
 }
 
-div h1 {
-    position: fixed;
-}
-
-.profile-container {
-    display: flex;
-    align-items: center;
-    margin: 20px;
-}
-
-.profile {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background-color: #ccc;
-    border: 2px solid #777;
-    margin-right: 10px;
+footer {
+    background-color: #1f1f1f;
+    color: #f0f0f0;
+    padding: 40px 20px;
     position: relative;
-    overflow: hidden;
-    cursor: pointer;
+    width: 100%;
 }
-
-.profile::after {
-    content: '📷'; /* Placeholder icon */
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 24px;
+.footer-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    max-width: 1200px;
+    margin: 0 auto;
+    gap: 20px;
 }
-
-.file-input {
-    display: none; /* Hide the default file input */
+.footer-column {
+    flex: 1 1 calc(25% - 20px); /* Adjust columns to fit and add spacing */
+    min-width: 250px;
+    margin: 20px 0;
 }
-
-.profile:hover {
-    background-color: #e0e0e0; /* Change color on hover */
+.footer-column h3 {
+    font-size: 18px;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #f0f0f0;
+    display: inline-block;
+    padding-bottom: 5px;
 }
-
-.profile:hover::after {
-    content: 'Click to upload'; /* Text overlay on hover */
+.footer-column ul {
+    list-style: none;
+    padding: 0;
+}
+.footer-column ul li {
+    margin: 10px 0;
+}
+.footer-column ul li a {
+    color: #f0f0f0;
+    text-decoration: none;
+    font-size: 14px;
+}
+.footer-column ul li a:hover {
+    color: #ffa500;
+}
+.social-icons {
+    display: flex;
+    justify-content: flex-start;
+    gap: 15px;
+    margin-top: 20px;
+}
+.social-icons a {
+    color: #f0f0f0;
+    text-decoration: none;
+    font-size: 18px;
+}
+.social-icons a:hover {
+    color: #ffa500;
+}
+.footer-bottom {
+    text-align: center;
+    margin-top: 40px;
     font-size: 12px;
-    color: #555;
-    position: absolute;
-    bottom: 10%;
-    left: 50%;
-    transform: translateX(-50%);
+    color: #a0a0a0;
 }

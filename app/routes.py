@@ -7,7 +7,7 @@ from flask import session, render_template, redirect, request, Blueprint, url_fo
 import pandas as pd
 from werkzeug.utils import secure_filename
 import os
-
+from .cleaning import data_cleaning
 
 key = secrets.token_hex(64)
 
@@ -22,6 +22,8 @@ def initialize():
         print("MySQL connection is not established.")
     else:
         print("MySQL connection is established.")
+
+
 @main_bp.route('/')
 def landing_page():
     return render_template('landing_page.html')
@@ -106,7 +108,8 @@ if not os.path.exists(UPLOAD_FOLDER):
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@main_bp.route('/upload', methods=['POST', 'GET'])
+
+main_bp.route('/upload', methods=['POST', 'GET'])
 def upload_data():
     if request.method == 'POST':
         file = request.files.get('file')
@@ -121,6 +124,9 @@ def upload_data():
                 data = pd.read_csv(file_path)
             elif filename.endswith('.xlsx'):
                 data = pd.read_excel(file_path)
+
+            # Automate data cleaning
+            data = data_cleaning(data)
 
             # Store column names in session
             session['uploaded_data'] = {"columns": data.columns.tolist()}

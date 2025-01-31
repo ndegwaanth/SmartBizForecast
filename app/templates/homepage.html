@@ -10,7 +10,6 @@
 <div class="file-upload-container">
     <div>
         <form action="{{ url_for('main.upload_data') }}" method="POST" enctype="multipart/form-data">
-            {{ csrf_token() }}
             <label for="file">Upload CSV or Excel file:</label>
             <input type="file" name="file" accept=".csv, .xlsx" required>
             <button type="submit">Upload</button>

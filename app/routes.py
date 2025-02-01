@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 from flask_login import login_user, logout_user, current_user
 # from werkzeug.security import generate_password_hash, check_password_hash
 
+
 load_dotenv()
 
 
@@ -25,6 +26,15 @@ bcrypt = Bcrypt()
 @main_bp.route('/')
 def landing_page():
     return render_template('landing_page.html')
+
+@main_bp.route('/homepage')
+def homepage():
+    return render_template('homepage.html')
+
+@main_bp.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('main.login'))
 
 
 @main_bp.route("/signup", methods=["POST", "GET"])
@@ -94,16 +104,12 @@ def login():
                 user = User(user_dict)
                 login_user(user)
                 flash(f"Welcome back, {current_user.username}!", "success")
-                return redirect(url_for('main.landing_page'))
+                return redirect(url_for('main.homepage'))
             else:
                 return render_template("login.html", form=form, error="Invalid email or password")
         except Exception as e:
             return render_template("login.html", form=form, error="Database error: " + str(e))
     return render_template("login.html", form=form)
-
-@main_bp.route('/homepage')
-def homepage():
-    return render_template('homepage.html')
 
 
 # Directory where you will store the uploaded files

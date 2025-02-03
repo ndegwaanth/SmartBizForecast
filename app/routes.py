@@ -209,7 +209,7 @@ def train_model():
         random_state = form.random_state.data
         model_preferences = form.model_preferences.data
 
-        # Perform model training here
+        # Performing model training here
         flash("Model training initiated!", "success")
         return redirect(url_for('main.prediction'))
 

@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, EmailField, PasswordField, SubmitField, SelectField, SelectMultipleField
-from wtforms.validators import EqualTo, DataRequired, Email, Length
+from wtforms import StringField, EmailField, PasswordField, SubmitField, SelectField, SelectMultipleField, FloatField, IntegerField, BooleanField
+from wtforms.validators import EqualTo, DataRequired, Email, Length, DataRequired, Optional, URL
 
 class Registration(FlaskForm):
     firstname = StringField('First Name', validators=[DataRequired(), Length(min=2, max=50)])
@@ -48,3 +48,55 @@ class LoginForm(FlaskForm):
 
 #     # Submit button
 #     submit = SubmitField('Predict')
+
+
+
+# Prediction forms
+'''
+target variable
+predictors variable
+hyperparameter tuning
+file upload
+api link
+perfomance metrics
+model training setting - data spliting
+model preferences
+'''
+from wtforms import widgets  # Import widgets
+
+class DynamicForm(FlaskForm):
+    target_variable = SelectField('Target Variable', validators=[DataRequired()])
+
+    # Use checkboxes for predictor variables
+    predictor_variables = SelectMultipleField(
+        'Predictor Variables',
+        option_widget=widgets.CheckboxInput(),  
+        widget=widgets.ListWidget(prefix_label=False), 
+        validators=[DataRequired()]
+    )
+
+    hyperparameter_tuning = BooleanField('Enable Hyperparameter Tuning', default=False, validators=[Optional()])
+    api_link = StringField('API Link', validators=[Optional(), URL()])
+    performance_metrics = SelectField('Performance Metrics', choices=[
+        ('accuracy', 'Accuracy'),
+        ('precision', 'Precision'),
+        ('recall', 'Recall'),
+        ('f1_score', 'F1 Score'),
+        ('roc_auc', 'ROC AUC')
+    ], validators=[DataRequired()])
+    test_size = FloatField('Test Size (0.1 - 0.9)', default=0.2, validators=[DataRequired()])
+    random_state = IntegerField('Random State', default=42, validators=[DataRequired()])
+    model_preferences = SelectField('Model Preferences', choices=[
+        ('linear_regression', 'Linear Regression'),
+        ('logistic_regression', 'Logistic Regression'),
+        ('random_forest', 'Random Forest'),
+        ('xgboost', 'XGBoost'),
+        ('svm', 'Support Vector Machine')
+    ], validators=[DataRequired()])
+    submit = SubmitField('Train Model')
+
+    def __init__(self, columns, *args, **kwargs):
+        super(DynamicForm, self).__init__(*args, **kwargs)
+        self.target_variable.choices = [(col, col) for col in columns]
+        self.predictor_variables.choices = [(col, col) for col in columns]
+

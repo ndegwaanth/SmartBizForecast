@@ -1,50 +1,221 @@
-{% extends "layout.html" %}
+{% extends "layout-two.html" %}
 
-{% block title %}Predictions{% endblock %}
+{% block title %}Prediction{% endblock %}
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/prediction.css') }}">
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f5f7fa;
+        margin: 20px;
+    }
 
+    h1, h2 {
+        color: #2c3e50;
+        text-align: center;
+    }
+
+    table {
+        width: 90%;
+        margin: 20px auto;
+        border-collapse: collapse;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        background-color: white;
+    }
+
+    th, td {
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        text-align: center;
+    }
+
+    th {
+        background-color: #2c3e50;
+        color: white;
+    }
+
+    tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+
+    form {
+        max-width: 600px;
+        margin: 30px auto;
+        padding: 20px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    form div {
+        margin-bottom: 15px;
+    }
+
+    label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 5px;
+        color: #34495e;
+    }
+
+    input[type="text"], input[type="number"], select, textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        box-sizing: border-box;
+    }
+
+    input[type="checkbox"] {
+        margin-right: 10px;
+    }
+
+    button, input[type="submit"] {
+        background-color: #2980b9;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background 0.3s ease;
+    }
+
+    button:hover, input[type="submit"]:hover {
+        background-color: #1c5985;
+    }
+
+    @media (max-width: 768px) {
+        table, form {
+            width: 95%;
+        }
+    }
+    input[type="checkbox"] {
+        transform: scale(1.2);
+        margin-right: 8px;
+        cursor: pointer;
+    }
+    label {
+        font-weight: 500;
+        cursor: pointer;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: white;
+    }
+
+    th, td {
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        text-align: center;
+        white-space: nowrap;  /* Prevent text from wrapping */
+    }
+
+    thead th {
+        position: sticky;      /* Keep headers sticky */
+        top: 0;
+        background-color: #2c3e50;
+        color: white;
+        z-index: 1;
+    }
+
+    div[style*="overflow-y: auto"] {
+        max-height: 400px;     /* Set max height for scrolling */
+        overflow-y: auto;      /* Enable vertical scrolling */
+        overflow-x: auto;      /* Enable horizontal scrolling if needed */
+    }
+
+</style>
+{% endblock %}
 
 {% block content %}
+<h1>Prediction Dashboard</h1>
 
-<div class="container mt-5">
-        <h1 class="mb-4">Choose Your Model Options</h1>
-        <form method="POST" action="{{ url_for('main.predictions') }}">
-            <!-- CSRF Token -->
-            {{ form.hidden_tag() }}
-            
-            <!-- Target Variable -->
-            <div class="mb-3">
-                <label for="target" class="form-label">{{ form.target.label }}</label>
-                {{ form.target(class="form-select") }}
-                {% for error in form.target.errors %}
-                    <div class="text-danger">{{ error }}</div>
+<!-- Display Uploaded Data -->
+<h2>Uploaded Data</h2>
+{% if headers and rows %}
+    <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ccc; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <table>
+            <thead>
+                <tr>
+                    {% for header in headers %}
+                        <th>{{ header }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                    <tr>
+                        {% for cell in row %}
+                            <td>{{ cell }}</td>
+                        {% endfor %}
+                    </tr>
                 {% endfor %}
-            </div>
-
-            <!-- Predictors -->
-            <div class="mb-3">
-                <label for="predictors" class="form-label">{{ form.predictors.label }}</label>
-                {{ form.predictors(class="form-control") }}
-                {% for error in form.predictors.errors %}
-                    <div class="text-danger">{{ error }}</div>
-                {% endfor %}
-            </div>
-
-            <!-- Model Selection -->
-            <div class="mb-3">
-                <label for="model_selection" class="form-label">{{ form.model_selection.label }}</label>
-                {{ form.model_selection(class="form-select") }}
-                {% for error in form.model_selection.errors %}
-                    <div class="text-danger">{{ error }}</div>
-                {% endfor %}
-            </div>
-
-            <!-- Submit Button -->
-            <div class="mb-3">
-                {{ form.submit(class="btn btn-primary") }}
-            </div>
-        </form>
+            </tbody>
+        </table>
     </div>
+{% else %}
+    <p style="text-align: center; color: #7f8c8d;">No data uploaded yet.</p>
+{% endif %}
 
+
+<!-- Model Training Form -->
+{% if form %}
+    <h2>Model Training Form</h2>
+    <form action="{{ url_for('main.train_model') }}" method="POST">
+        {{ form.hidden_tag() }}
+
+        <div>
+            {{ form.target_variable.label }}
+            {{ form.target_variable }}
+        </div>
+
+        <div>
+            {{ form.predictor_variables.label }}
+            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                {% for subfield in form.predictor_variables %}
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        {{ subfield }} {{ subfield.label.text }}
+                    </label>
+                {% endfor %}
+            </div>
+        </div>
+
+
+        <div>
+            {{ form.hyperparameter_tuning.label }}
+            {{ form.hyperparameter_tuning }}
+        </div>
+
+        <div>
+            {{ form.api_link.label }}
+            {{ form.api_link }}
+        </div>
+
+        <div>
+            {{ form.performance_metrics.label }}
+            {{ form.performance_metrics }}
+        </div>
+
+        <div>
+            {{ form.test_size.label }}
+            {{ form.test_size }}
+        </div>
+
+        <div>
+            {{ form.random_state.label }}
+            {{ form.random_state }}
+        </div>
+
+        <div>
+            {{ form.model_preferences.label }}
+            {{ form.model_preferences }}
+        </div>
+
+        <div style="text-align: center;">
+            {{ form.submit }}
+        </div>
+    </form>
+{% endif %}
 {% endblock %}

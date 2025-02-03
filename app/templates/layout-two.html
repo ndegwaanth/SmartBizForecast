@@ -24,7 +24,7 @@
         <i class="fas fa-bars menu-icon"></i>
         <ul class="dropdown-menu" id="dropdownMenu">
             <li>Profile Setting</li>
-            <li>Prediction</li>
+            <li><a href="{{ url_for('main.prediction') }}">Prediction</a></li>
             <li>Visualization</li>
             <li><a href="{{ url_for('main.logout') }}">Logout</a></li>
         </ul>
@@ -33,7 +33,7 @@
     <nav>
         <div>
             <ul>
-                <li>Prediction</li>
+                <li style="color: white;"><a href="{{ url_for('main.prediction') }}">Prediction</a></li>
                 <li>Descriptives</li>
                 <li>Visualization</li>
             </ul>

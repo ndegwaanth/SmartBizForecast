@@ -1,4 +1,4 @@
-from .forms import Registration, LoginForm
+from .forms import Registration, LoginForm, DynamicForm
 from flask_bcrypt import Bcrypt
 from flask_mysqldb import MySQL
 import secrets
@@ -9,9 +9,9 @@ import os
 from .models import User
 from .cleaning import data_cleaning
 from dotenv import load_dotenv
-from flask_login import login_user, logout_user, current_user
 # from werkzeug.security import generate_password_hash, check_password_hash
-
+import pandas as pd
+from flask_login import login_user, logout_user, login_required, login_remembered, current_user
 
 load_dotenv()
 
@@ -29,12 +29,20 @@ def landing_page():
 
 @main_bp.route('/homepage')
 def homepage():
+    login_remembered()
     return render_template('homepage.html')
 
 @main_bp.route('/logout')
+@login_required
 def logout():
     logout_user()
     return redirect(url_for('main.login'))
+
+@main_bp.route('/prediction')
+def prediction():
+    columns = session.get('columns', [])
+    form = DynamicForm(columns=columns)
+    return render_template('prediction.html', form=form)
 
 
 @main_bp.route("/signup", methods=["POST", "GET"])
@@ -112,11 +120,11 @@ def login():
     return render_template("login.html", form=form)
 
 
-# Directory where you will store the uploaded files
+# Directory where I will store the uploaded files
 UPLOAD_FOLDER = 'data/user'
 ALLOWED_EXTENSIONS = {'csv', 'xlsx'}
 
-# Ensure the upload folder exists
+# Ensuring the upload folder exists
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
@@ -135,24 +143,45 @@ def upload_data():
             file_path = os.path.join(UPLOAD_FOLDER, filename)
             file.save(file_path)
 
-            # Process the file
             try:
                 if filename.endswith('.csv'):
                     data = pd.read_csv(file_path)
+                    print(data.head(10))
                 elif filename.endswith('.xlsx'):
                     data = pd.read_excel(file_path)
+                    print(data.head(10))
                 else:
                     flash("Unsupported file format.", "error")
                     return redirect(url_for('main.upload_data'))
 
-                # Automate data cleaning
-                data = data_cleaning(data)
+                # data_1 = pd.isna.sum(data)
+                # print(f"The sum is na before cleanig is: {data_1}")
 
-                # Store column names in session
-                session['uploaded_data'] = {"columns": data.columns.tolist()}
+                # # Automate data cleaning
+                # data = data_cleaning(data)
 
-                flash("File uploaded and cleaned successfully!", "success")
-                return redirect(url_for('main.predictions'))
+                # data_2 = pd.isna.sum(data)
+                # print(f"The sum of na after cleaning is: {data_2}")
+
+                # Prepare data for the template
+                table_headers = data.columns.tolist()
+                table_data = data.values.tolist()
+
+                # Create the dynamic form
+                session['columns'] = table_headers
+                form = DynamicForm(columns=table_headers)
+                
+
+                # # Pass data and form to prediction.html
+                # return render_template(
+                #     'homepage.html',
+                #     headers=table_headers,
+                #     rows=table_data,
+                #     form=form
+                # )
+
+                # Passing the data to the template
+                return render_template('prediction.html', headers=table_headers, rows=table_data, form=form)
 
             except Exception as e:
                 flash(f"Error processing file: {str(e)}", "error")
@@ -162,3 +191,27 @@ def upload_data():
             return redirect(url_for('main.upload_data'))
 
     return render_template('homepage.html')
+
+
+@main_bp.route('/train_model', methods=['POST'])
+def train_model():
+    columns = session.get('columns', [])
+    form = DynamicForm(columns=columns)
+
+    if form.validate_on_submit():
+        # Extracting form data
+        target_variable = form.target_variable.data
+        predictor_variables = form.predictor_variables.data
+        hyperparameter_tuning = form.hyperparameter_tuning.data
+        api_link = form.api_link.data
+        performance_metrics = form.performance_metrics.data
+        test_size = form.test_size.data
+        random_state = form.random_state.data
+        model_preferences = form.model_preferences.data
+
+        # Perform model training here
+        flash("Model training initiated!", "success")
+        return redirect(url_for('main.prediction'))
+
+    flash("Form validation failed. Please check your inputs.", "error")
+    return redirect(url_for('main.prediction'))

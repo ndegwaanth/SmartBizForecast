@@ -2,69 +2,110 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 
 
-# Automating Missing values
-def hadle_missing_values(df):
+# Automating Missing Values
+def handle_missing_values(df):
+    """
+    Handle missing values in the DataFrame.
+    - For numerical columns: Fill with the mean.
+    - For categorical columns: Fill with the mode.
+    """
     for column in df.columns:
-        if df[column].dtype in ['int64', 'float4']: 
-            '''Numerical colums'''
-            df[column].fillna(df[column].mean(), inplace=True)
-        elif df[column].dtype == 'object':
-            """Categorical variable"""
-            df[column].fillna(df[column].mode()[0], inplace=True)
+        if df[column].dtype in ['int64', 'float64']:  # Numerical columns
+            if df[column].isnull().any():  # Check if there are missing values
+                df[column].fillna(df[column].mean(), inplace=True)
+        elif df[column].dtype == 'object':  # Categorical columns
+            if df[column].isnull().any():  # Check if there are missing values
+                df[column].fillna(df[column].mode()[0], inplace=True)
     return df
 
 
 # Removing Duplicates
 def remove_duplicates(df):
-    df.drop_duplicates(inplace=True)
+    """
+    Remove duplicate rows from the DataFrame.
+    """
+    if df.duplicated().any():  # Check if there are duplicates
+        df.drop_duplicates(inplace=True)
     return df
 
 
-# Handling Outliers using interquartile range
+# Handling Outliers using Interquartile Range (IQR)
 def remove_outliers(df):
-    for column in df.select_dtypes(include=['int64', 'float64']).columns:
-        Q1 = df[column].quantile(0.25)
-        Q3 = df[column].quantile(0.75)
-        IQR = Q3 - Q1
-        lower_bound = Q1 - 1.5 * IQR
-        upper_bound = Q3 + 1.5 * IQR
-        df = df[(df[column] >= lower_bound) & (df[column] <= upper_bound)]
+    """
+    Remove outliers from numerical columns using the IQR method.
+    """
+    numerical_columns = df.select_dtypes(include=['int64', 'float64']).columns
+    if len(numerical_columns) > 0:
+        for column in numerical_columns:
+            Q1 = df[column].quantile(0.25)
+            Q3 = df[column].quantile(0.75)
+            IQR = Q3 - Q1
+            lower_bound = Q1 - 1.5 * IQR
+            upper_bound = Q3 + 1.5 * IQR
+            df = df[(df[column] >= lower_bound) & (df[column] <= upper_bound)]
     return df
 
 
-# Standardize The data types of the dataset
-def standardized_data_types(df):
+# Standardize Data Types
+def standardize_data_types(df):
+    """
+    Standardize data types in the DataFrame.
+    - Convert columns with 'date' in their names to datetime.
+    - Convert object columns to category.
+    """
     for column in df.columns:
         if 'date' in column.lower():
-            """Columns with 'date' in their names """
-            df[column] = pd.to_datetime(df[column], errors='coerce')
+            try:
+                df[column] = pd.to_datetime(df[column], errors='coerce')
+            except Exception as e:
+                print(f"Error converting {column} to datetime: {e}")
         elif df[column].dtype == 'object':
-            """ Converting object to category if there is """
             df[column] = df[column].astype('category')
     return df
 
 
-# Normalize or scaling the Numerical Data
+# Normalize or Scale Numerical Data
 def scale_numeric_data(df):
-    scaler = MinMaxScaler()
-    numeric_columns = df.select_dtypes(include=['int64', 'float64']).columns
-    df[numeric_columns] = scaler.fit_transform(df[numeric_columns])
+    """
+    Scale numerical data using MinMaxScaler.
+    """
+    numerical_columns = df.select_dtypes(include=['int64', 'float64']).columns
+    if len(numerical_columns) > 0:
+        scaler = MinMaxScaler()
+        df[numerical_columns] = scaler.fit_transform(df[numerical_columns])
     return df
 
 
-# Overal data cleaning functions in a single function
+# Overall Data Cleaning Function
 def data_cleaning(df):
+    """
+    Perform all data cleaning steps on the DataFrame.
+    - Handle missing values.
+    - Remove duplicates.
+    - Remove outliers.
+    - Standardize data types.
+    - Scale numerical data.
+    """
+    print("Original data shape:", df.shape)
+
     # Handling Missing Values
-    df = hadle_missing_values(df)
+    df = handle_missing_values(df)
+    print("After handling missing values:", df.shape)
 
     # Removing Duplicates
     df = remove_duplicates(df)
+    print("After removing duplicates:", df.shape)
 
     # Removing Outliers
     df = remove_outliers(df)
+    print("After removing outliers:", df.shape)
 
-    # standardize data types
-    df = standardized_data_types(df)
+    # Standardize Data Types
+    df = standardize_data_types(df)
+    print("After standardizing data types:", df.shape)
 
-    # Scaling Numerical values
+    # Scaling Numerical Data
     df = scale_numeric_data(df)
+    print("After scaling numerical data:", df.shape)
+
+    return df

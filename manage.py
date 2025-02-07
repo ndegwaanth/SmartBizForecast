@@ -1,5 +1,7 @@
 from app import app
+from app.routes import run_streamlit
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8080)
+    run_streamlit()
+    app.run()

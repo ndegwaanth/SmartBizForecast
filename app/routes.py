@@ -12,6 +12,9 @@ from dotenv import load_dotenv
 # from werkzeug.security import generate_password_hash, check_password_hash
 import pandas as pd
 from flask_login import login_user, logout_user, login_required, login_remembered, current_user
+import os
+import subprocess
+
 
 load_dotenv()
 
@@ -215,3 +218,15 @@ def train_model():
 
     flash("Form validation failed. Please check your inputs.", "error")
     return redirect(url_for('main.prediction'))
+
+
+def run_streamlit():
+    streamlit_script = os.path.join(os.path.dirname(__file__), "dashboard.py")
+    subprocess.Popen(
+        ["streamlit", "run", streamlit_script, "--server.port", "8501", "--server.address", "0.0.0.0"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
+
+@main_bp.route("/streamlit")
+def streamlit_redirect():
+    return redirect("http://localhost:8501", code=302)

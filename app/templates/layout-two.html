@@ -12,6 +12,12 @@
 
     {% block styles %}
     {% endblock %}
+
+    <script>
+        function openDashboard() {
+            window.open("/streamlit", "_blank");  // Opens Streamlit in a new tab
+        }
+    </script>
 </head>
 <body>
     
@@ -25,7 +31,7 @@
         <ul class="dropdown-menu" id="dropdownMenu">
             <li>Profile Setting</li>
             <li><a href="{{ url_for('main.prediction') }}">Prediction</a></li>
-            <li>Visualization</li>
+            <li><button onclick="openDashboard()">Visualize Data</button></li>
             <li><a href="{{ url_for('main.logout') }}">Logout</a></li>
         </ul>
     </header>

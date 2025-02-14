@@ -14,7 +14,7 @@ import pandas as pd
 from flask_login import login_user, logout_user, login_required, login_remembered, current_user
 import os
 import subprocess
-
+import uuid
 
 load_dotenv()
 
@@ -40,12 +40,6 @@ def homepage():
 def logout():
     logout_user()
     return redirect(url_for('main.login'))
-
-@main_bp.route('/prediction')
-def prediction():
-    columns = session.get('columns', [])
-    form = DynamicForm(columns=columns)
-    return render_template('prediction.html', form=form)
 
 
 @main_bp.route("/signup", methods=["POST", "GET"])
@@ -143,28 +137,20 @@ def upload_data():
 
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            file_path = os.path.join(UPLOAD_FOLDER, filename)
+            unique_filename = f"{uuid.uuid4()}_{filename}"
+            file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
             file.save(file_path)
 
             try:
                 if filename.endswith('.csv'):
-                    data = pd.read_csv(file_path)
+                    data = pd.read_csv(file_path, nrows=5)
                     print(data.head(10))
                 elif filename.endswith('.xlsx'):
-                    data = pd.read_excel(file_path)
+                    data = pd.read_excel(file_path, nrows=5)
                     print(data.head(10))
                 else:
                     flash("Unsupported file format.", "error")
                     return redirect(url_for('main.upload_data'))
-
-                # data_1 = pd.isna.sum(data)
-                # print(f"The sum is na before cleanig is: {data_1}")
-
-                # # Automate data cleaning
-                # data = data_cleaning(data)
-
-                # data_2 = pd.isna.sum(data)
-                # print(f"The sum of na after cleaning is: {data_2}")
 
                 # Prepare data for the template
                 table_headers = data.columns.tolist()
@@ -172,6 +158,8 @@ def upload_data():
 
                 # Create the dynamic form
                 session['columns'] = table_headers
+                session['uploaded_file'] = unique_filename
+                # session['data_rows'] = data.values.tolist()
                 form = DynamicForm(columns=table_headers)
                 
 
@@ -195,6 +183,28 @@ def upload_data():
 
     return render_template('homepage.html')
 
+
+@main_bp.route('/prediction')
+def prediction():
+    columns = session.get('columns', [])
+    form = DynamicForm(columns=columns)
+
+    filename = session.get('uploaded_file')
+    rows = []
+
+    if filename:
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        try:
+            if filename.endswith('.csv'):
+                data = pd.read_csv(file_path, nrows=10)
+            elif filename.endswith('.xlsx'):
+                data = pd.read_excel(file_path, nrows=10)
+
+            rows = data.values.tolist()
+        except Exception as e:
+            flash(f"Error rading uploaded file: {str(e)}", "error")
+    
+    return render_template('prediction.html', form=form, headers=columns, rows=rows)
 
 @main_bp.route('/train_model', methods=['POST'])
 def train_model():

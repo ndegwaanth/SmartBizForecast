@@ -4,4 +4,4 @@ from app.routes import run_streamlit
 
 if __name__ == "__main__":
     run_streamlit()
-    app.run()
+    app.run(debug=True)

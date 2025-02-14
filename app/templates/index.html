@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Churn Prediction</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Customer Churn Prediction</h1>
+
+        <!-- File Upload Section -->
+        <div class="upload-section">
+            <form action="{{ url_for('upload_data') }}" method="POST" enctype="multipart/form-data">
+                <input type="file" name="file" required>
+                <button type="submit">Upload Dataset</button>
+            </form>
+        </div>
+
+        <hr>
+
+        {% if predictions %}
+        <div class="results">
+            <h2>Prediction Results</h2>
+            <p><strong>Model Used:</strong> Logistic Regression</p>
+
+            <div class="metrics">
+                <p><strong>Accuracy:</strong> {{ accuracy | round(4) }}</p>
+                <p><strong>Precision:</strong> {{ precision | round(4) }}</p>
+                <p><strong>Recall:</strong> {{ recall | round(4) }}</p>
+                <p><strong>F1 Score:</strong> {{ f1_score | round(4) }}</p>
+
+                {% if auc %}
+                    <p><strong>AUC Score:</strong> {{ auc | round(4) }}</p>
+                {% else %}
+                    <p><strong>AUC Score:</strong> Not available</p>
+                {% endif %}
+            </div>
+
+            <h3>Confusion Matrix</h3>
+            <table>
+                {% for row in conf_matrix %}
+                    <tr>
+                        {% for col in row %}
+                            <td>{{ col }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </table>
+
+            <h3>Predicted Labels</h3>
+            <ul>
+                {% for prediction in predictions %}
+                    <li>{{ prediction }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% else %}
+        <p class="no-data">No predictions available. Please upload a dataset.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

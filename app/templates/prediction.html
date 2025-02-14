@@ -163,7 +163,7 @@
 <!-- Model Training Form -->
 {% if form %}
     <h2>Model Training Form</h2>
-    <form action="{{ url_for('main.train_model') }}" method="POST">
+    <form action="{{ url_for('main.model_training') }}" method="POST">
         {{ form.hidden_tag() }}
 
         <div>
@@ -214,7 +214,7 @@
         </div>
 
         <div style="text-align: center;">
-            {{ form.submit }}
+            <button onclick="url_for('main.model_training')">{{ form.submit }}</button>
         </div>
     </form>
 {% endif %}

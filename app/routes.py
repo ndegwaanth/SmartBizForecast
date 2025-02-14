@@ -15,6 +15,11 @@ from flask_login import login_user, logout_user, login_required, login_remembere
 import os
 import subprocess
 import uuid
+from sklearn.metrics import confusion_matrix, accuracy_score, roc_auc_score
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
 
 load_dotenv()
 
@@ -206,29 +211,6 @@ def prediction():
     
     return render_template('prediction.html', form=form, headers=columns, rows=rows)
 
-@main_bp.route('/train_model', methods=['POST'])
-def train_model():
-    columns = session.get('columns', [])
-    form = DynamicForm(columns=columns)
-
-    if form.validate_on_submit():
-        # Extracting form data
-        target_variable = form.target_variable.data
-        predictor_variables = form.predictor_variables.data
-        hyperparameter_tuning = form.hyperparameter_tuning.data
-        api_link = form.api_link.data
-        performance_metrics = form.performance_metrics.data
-        test_size = form.test_size.data
-        random_state = form.random_state.data
-        model_preferences = form.model_preferences.data
-
-        # Performing model training here
-        flash("Model training initiated!", "success")
-        return redirect(url_for('main.prediction'))
-
-    flash("Form validation failed. Please check your inputs.", "error")
-    return redirect(url_for('main.prediction'))
-
 
 def run_streamlit():
     streamlit_script = os.path.join(os.path.dirname(__file__), "dashboard.py")
@@ -240,3 +222,67 @@ def run_streamlit():
 @main_bp.route("/streamlit")
 def streamlit_redirect():
     return redirect("http://localhost:8501", code=302)
+
+
+# Customer Churn Prediction
+@main_bp.route('/predict', methods=['GET', 'POST'])
+def model_training():
+    columns = session.get('columns', [])  # Retrieve column names from session
+    form = DynamicForm(columns=columns)
+
+    if form.validate_on_submit():
+        target_variable = form.target_variable.data
+        predictor_variables = form.predictor_variables.data
+        test_size = float(form.test_size.data or 0.2)  # Default to 20% test data
+        random_state = int(form.random_state.data or 42)  # Default random state
+        model_preferences = form.model_preferences.data  # User-selected model
+        hyperparameter_tuning = form.hyperparameter_tuning.data
+        api_link = form.api_link.data
+        performance_metrics = form.performance_metrics.data
+
+        # model_pref = model_preferences.values.tolist()
+        # for i in len(model_preferences):
+        #     print(model_preferences[i])
+
+        # Ensure session has a valid dataset stored
+        if 'dataset' not in session:
+            flash("No dataset found. Please upload a dataset first.", "warning")
+            return redirect(url_for('main.upload_data'))
+
+        df = pd.read_json(session['dataset'])
+
+        if target_variable not in df.columns or any(var not in df.columns for var in predictor_variables):
+            flash("Invalid target or predictor variables.", "danger")
+            return redirect(url_for('main.upload_data'))
+
+        X = df[predictor_variables]
+        y = df[target_variable]
+
+        # Train/Test Split
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
+
+        # Select Model Based on User Preference
+        if model_preferences == "random_forest":
+            model = RandomForestClassifier(random_state=random_state)
+        elif model_preferences == "logistic_regression":
+            model = LogisticRegression(random_state=random_state, max_iter=1000)
+        else:
+            flash("Invalid model selection.", "danger")
+            return redirect(url_for('main.upload_data'))
+
+        # Train the selected model
+        model.fit(X_train, y_train)
+        predictions = model.predict(X_test)
+
+        # Performance Metrics
+        accuracy = accuracy_score(y_test, predictions)
+        auc = roc_auc_score(y_test, predictions) if len(set(y_test)) > 1 else None
+        conf_matrix = confusion_matrix(y_test, predictions).tolist()
+
+        return render_template("index.html", 
+                               predictions=predictions.tolist(), 
+                               accuracy=accuracy, 
+                               auc=auc, 
+                               conf_matrix=conf_matrix)
+
+    return render_template("prediction.html", form=form)

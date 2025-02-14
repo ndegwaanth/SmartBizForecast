@@ -72,7 +72,6 @@ class DynamicForm(FlaskForm):
         'Predictor Variables',
         option_widget=widgets.CheckboxInput(),  
         widget=widgets.ListWidget(prefix_label=False), 
-        validators=[DataRequired()]
     )
 
     hyperparameter_tuning = BooleanField('Enable Hyperparameter Tuning', default=False, validators=[Optional()])

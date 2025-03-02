@@ -20,6 +20,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
+from .predictions import ChurnPrediction
+from flask import jsonify
 
 load_dotenv()
 
@@ -140,53 +142,60 @@ def upload_data():
     if request.method == 'POST':
         file = request.files.get('file')
 
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            unique_filename = f"{uuid.uuid4()}_{filename}"
-            file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
-            file.save(file_path)
+        # Check if a file is selected
+        if not file:
+            flash("No file was uploaded.", "error")
+            print("DEBUG: No file received in request")
+            return redirect(url_for('main.upload_data'))
 
-            try:
-                if filename.endswith('.csv'):
-                    data = pd.read_csv(file_path, nrows=5)
-                    print(data.head(10))
-                elif filename.endswith('.xlsx'):
-                    data = pd.read_excel(file_path, nrows=5)
-                    print(data.head(10))
-                else:
-                    flash("Unsupported file format.", "error")
-                    return redirect(url_for('main.upload_data'))
+        # Check if the file is empty or has an invalid format
+        if file.filename == '':
+            flash("No selected file.", "error")
+            print("DEBUG: Empty filename")
+            return redirect(url_for('main.upload_data'))
 
-                # Prepare data for the template
-                table_headers = data.columns.tolist()
-                table_data = data.values.tolist()
-
-                # Create the dynamic form
-                session['columns'] = table_headers
-                session['uploaded_file'] = unique_filename
-                # session['data_rows'] = data.values.tolist()
-                form = DynamicForm(columns=table_headers)
-                
-
-                # # Pass data and form to prediction.html
-                # return render_template(
-                #     'homepage.html',
-                #     headers=table_headers,
-                #     rows=table_data,
-                #     form=form
-                # )
-
-                # Passing the data to the template
-                return render_template('prediction.html', headers=table_headers, rows=table_data, form=form)
-
-            except Exception as e:
-                flash(f"Error processing file: {str(e)}", "error")
-                return redirect(url_for('main.upload_data'))
-        else:
+        if not allowed_file(file.filename):
             flash("Invalid file format. Please upload a .csv or .xlsx file.", "error")
+            print(f"DEBUG: Invalid file type -> {file.filename}")
+            return redirect(url_for('main.upload_data'))
+
+        # Save file with a unique name
+        filename = secure_filename(file.filename)
+        unique_filename = f"{uuid.uuid4()}_{filename}"
+        file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+        file.save(file_path)
+
+        try:
+            # Read the dataset (Only first 10 rows to avoid session overload)
+            if filename.lower().endswith('.csv'):
+                df = pd.read_csv(file_path, nrows=10)
+            elif filename.lower().endswith('.xlsx'):
+                df = pd.read_excel(file_path, nrows=10)
+            else:
+                flash("Unsupported file format.", "error")
+                print("DEBUG: File format not supported")
+                return redirect(url_for('main.upload_data'))
+
+            print("DEBUG: File uploaded successfully:", file_path)
+            print("DEBUG: Data preview:\n", df.head())
+
+            # Store only column names in session, not the full dataset
+            session['columns'] = df.columns.tolist()
+            session['uploaded_file'] = unique_filename
+            session['dataset_preview'] = df.head(5).to_json()  # Store a preview, not full data
+
+            # Generate dynamic form
+            form = DynamicForm(columns=df.columns.tolist())
+
+            return render_template('prediction.html', headers=df.columns.tolist(), rows=df.values.tolist(), form=form)
+
+        except Exception as e:
+            flash(f"Error processing file: {str(e)}", "error")
+            print("DEBUG: Exception ->", str(e))
             return redirect(url_for('main.upload_data'))
 
     return render_template('homepage.html')
+
 
 
 @main_bp.route('/prediction')
@@ -225,64 +234,73 @@ def streamlit_redirect():
 
 
 # Customer Churn Prediction
+# Initialize churn prediction model
+churn = ChurnPrediction()
+
 @main_bp.route('/predict', methods=['GET', 'POST'])
 def model_training():
     columns = session.get('columns', [])  # Retrieve column names from session
     form = DynamicForm(columns=columns)
+    metrics = None 
+    graphs = []  # Initialize empty graph list
 
     if form.validate_on_submit():
         target_variable = form.target_variable.data
         predictor_variables = form.predictor_variables.data
-        test_size = float(form.test_size.data or 0.2)  # Default to 20% test data
-        random_state = int(form.random_state.data or 42)  # Default random state
-        model_preferences = form.model_preferences.data  # User-selected model
-        hyperparameter_tuning = form.hyperparameter_tuning.data
-        api_link = form.api_link.data
-        performance_metrics = form.performance_metrics.data
+        test_size = float(form.test_size.data or 0.2)  # Default 20% test size
+        random_state = int(form.random_state.data or 42)  # Default seed
 
-        # model_pref = model_preferences.values.tolist()
-        # for i in len(model_preferences):
-        #     print(model_preferences[i])
-
-        # Ensure session has a valid dataset stored
-        if 'dataset' not in session:
+        # Ensure dataset exists
+        uploaded_file = session.get('uploaded_file')
+        if not uploaded_file:
             flash("No dataset found. Please upload a dataset first.", "warning")
             return redirect(url_for('main.upload_data'))
 
-        df = pd.read_json(session['dataset'])
+        file_path = os.path.join(UPLOAD_FOLDER, uploaded_file)
 
-        if target_variable not in df.columns or any(var not in df.columns for var in predictor_variables):
-            flash("Invalid target or predictor variables.", "danger")
+        # Reload dataset from disk
+        try:
+            if uploaded_file.endswith('.csv'):
+                df = pd.read_csv(file_path)
+            elif uploaded_file.endswith('.xlsx'):
+                df = pd.read_excel(file_path)
+            else:
+                flash("Unsupported file format.", "error")
+                return redirect(url_for('main.upload_data'))
+        except Exception as e:
+            flash(f"Error loading dataset: {str(e)}", "error")
             return redirect(url_for('main.upload_data'))
 
-        X = df[predictor_variables]
-        y = df[target_variable]
-
-        # Train/Test Split
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
-
-        # Select Model Based on User Preference
-        if model_preferences == "random_forest":
-            model = RandomForestClassifier(random_state=random_state)
-        elif model_preferences == "logistic_regression":
-            model = LogisticRegression(random_state=random_state, max_iter=1000)
-        else:
-            flash("Invalid model selection.", "danger")
+        # Validate selected columns
+        missing_columns = [col for col in predictor_variables if col not in df.columns]
+        if target_variable not in df.columns or missing_columns:
+            flash(f"Invalid columns: {missing_columns} missing.", "danger")
             return redirect(url_for('main.upload_data'))
 
-        # Train the selected model
-        model.fit(X_train, y_train)
-        predictions = model.predict(X_test)
+        # Train the model and get metrics
+        metrics = churn.train_initial_model(df, target_variable, test_size, random_state)
 
-        # Performance Metrics
-        accuracy = accuracy_score(y_test, predictions)
-        auc = roc_auc_score(y_test, predictions) if len(set(y_test)) > 1 else None
-        conf_matrix = confusion_matrix(y_test, predictions).tolist()
+        # Generate graphs
+        graphs = churn.generate_visualizations(df, target_variable)
 
-        return render_template("index.html", 
-                               predictions=predictions.tolist(), 
-                               accuracy=accuracy, 
-                               auc=auc, 
-                               conf_matrix=conf_matrix)
 
-    return render_template("prediction.html", form=form)
+    return render_template('churnpred.html', metrics=metrics, graphs=graphs, form=form)
+
+
+
+@main_bp.route('/predict_churn', methods=['POST'])
+def predict_churn():
+    """Predicts churn for new data provided in JSON format."""
+    if not churn.model:
+        return jsonify({"error": "Model is not trained yet. Train it first!"}), 400
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data received"}), 400
+
+    try:
+        df = pd.DataFrame(data)
+        predictions = churn.predict_churn(df)
+        return jsonify({"predictions": predictions.tolist()})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

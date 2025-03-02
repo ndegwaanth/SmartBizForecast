@@ -6,7 +6,7 @@ from flask_wtf.csrf import CSRFProtect
 import os
 from flask_login import LoginManager
 from pymongo import MongoClient
-from flask_wtf import CSRFProtect
+from flask_session import Session
 
 # Load environment variables
 load_dotenv()
@@ -14,12 +14,11 @@ load_dotenv()
 # Create Flask app
 app = Flask(__name__)
 
+# Ensure SECRET_KEY is always set
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(32))  # Generates a secure key if missing
 
-#CSRF
+# Initialize CSRF protection
 csrf = CSRFProtect(app)
-
-# Set a secret key for sessions and CSRF
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(32))
 
 # MongoDB Configuration
 Mongo_url = os.getenv("MONGODB_URL")
@@ -27,11 +26,10 @@ client = MongoClient(Mongo_url)
 db = client['Users']
 collection = db['users-info']
 
-# Initialize extensions
+# Initialize other extensions
 bcrypt = Bcrypt(app)
-csrf = CSRFProtect(app)
 
-# Login Manager
+# Initialize Flask-Login
 login_manager = LoginManager(app)
 login_manager.login_view = 'main.login'
 

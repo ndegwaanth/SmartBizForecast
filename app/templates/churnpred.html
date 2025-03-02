@@ -1,0 +1,109 @@
+{% extends "layout-two.html" %}
+
+{% block title %}Churn Prediction{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="text-center">
+        <h2 class="fw-bold text-primary">Customer Churn Prediction</h2>
+        <p class="text-muted">Train and evaluate a machine learning model for predicting customer churn.</p>
+    </div>
+
+    {% if not metrics %}
+    <!-- Model Training Form -->
+    <div class="card shadow-lg p-4 mt-4">
+        <h4 class="mb-3 text-secondary">Train the Model</h4>
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Target Variable:</label>
+                {{ form.target_variable(class="form-control") }}
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Predictor Variables:</label>
+                {{ form.predictor_variables(class="form-control") }}
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Test Size (Default: 0.2):</label>
+                {{ form.test_size(class="form-control") }}
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Random State (Default: 42):</label>
+                {{ form.random_state(class="form-control") }}
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Train Model</button>
+        </form>
+    </div>
+
+    {% else %}
+    <!-- Model Performance Section -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card shadow p-4">
+                <h4 class="mb-3 text-secondary">Model Performance Metrics</h4>
+                <table class="table table-hover">
+                    <tr>
+                        <th>Accuracy</th>
+                        <td><span class="badge bg-success">{{ metrics.accuracy | round(4) }}</span></td>
+                    </tr>
+                    <tr>
+                        <th>F1 Score</th>
+                        <td><span class="badge bg-info">{{ metrics.f1_score | round(4) }}</span></td>
+                    </tr>
+                    <tr>
+                        <th>Recall</th>
+                        <td><span class="badge bg-warning">{{ metrics.recall | round(4) }}</span></td>
+                    </tr>
+                    <tr>
+                        <th>ROC AUC Score</th>
+                        <td><span class="badge bg-primary">{{ metrics.roc_auc | round(4) }}</span></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Confusion Matrix -->
+        <div class="col-md-6">
+            <div class="card shadow p-4">
+                <h4 class="mb-3 text-secondary">Confusion Matrix</h4>
+                <table class="table text-center table-bordered">
+                    <thead class="table-dark">
+                        <tr>
+                            <th></th>
+                            <th>Predicted: No Churn</th>
+                            <th>Predicted: Churn</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th class="table-light">Actual: No Churn</th>
+                            <td class="bg-success text-white">{{ metrics.confusion_matrix[0][0] }}</td>
+                            <td class="bg-danger text-white">{{ metrics.confusion_matrix[0][1] }}</td>
+                        </tr>
+                        <tr>
+                            <th class="table-light">Actual: Churn</th>
+                            <td class="bg-danger text-white">{{ metrics.confusion_matrix[1][0] }}</td>
+                            <td class="bg-success text-white">{{ metrics.confusion_matrix[1][1] }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+   <!-- Graph Section -->
+    <div class="mt-5">
+        <h3 class="text-center text-primary">Churn Prediction Visualizations</h3>
+        <div class="row">
+            {% for graph in graphs %}
+            <div class="col-md-6 mt-3">
+                <div class="card shadow p-3">
+                    <img src="data:image/png;base64,{{ graph }}" class="img-fluid rounded" alt="Churn Analysis Graph">
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% endif %}
+</div>
+{% endblock %}

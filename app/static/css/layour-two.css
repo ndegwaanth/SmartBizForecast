@@ -76,6 +76,7 @@ nav ul li:hover {
     object-fit: cover;
     border: 2px solid #ced4da;
     cursor: pointer;
+    align-items: flex-end;
 }
 
 .profile-section input[type="file"] {

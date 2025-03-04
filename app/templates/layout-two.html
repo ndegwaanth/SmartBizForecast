@@ -22,7 +22,8 @@
 <body>
     
     <header>
-        <h2><img src="../static/images/logo.png" alt="Logo"> Predictive Analytics</h2>
+        <h2><a href="{{ url_for('main.homepage') }}"><img src="../static/images/logo.png" alt="Logo">Predictive Analytics</h2>
+        
         <div class="profile-section">
             <img id="profile-preview" src="../static/images/default-profile.png" alt="Profile Picture">
             <input type="file" id="profile" accept=".jpg, .png">
@@ -31,7 +32,7 @@
         <ul class="dropdown-menu" id="dropdownMenu">
             <li>Profile Setting</li>
             <li><a href="{{ url_for('main.prediction') }}">Prediction</a></li>
-            <li><a href="javascript:void(0);" onclick="openDashboard()">Visualize Data</a></li>
+            <li><a href="javascript:void(0);" onclick="openDashboard()">Visualization Dashboard</a></li>
             <li><a href="{{ url_for('main.logout') }}">Logout</a></li>
         </ul>
     </header>
@@ -39,9 +40,9 @@
     <nav>
         <div>
             <ul>
-                <li style="color: white;"><a href="{{ url_for('main.prediction') }}">Prediction</a></li>
+                <li><a href="{{ url_for('main.prediction') }}">Prediction</a></li>
                 <li>Descriptives</li>
-                <li>Visualization</li>
+                <li><a href="javascript:void(0);" onclick="openDashboard()">Visualization Dashboard</a></li>
             </ul>
         </div>
     </nav>

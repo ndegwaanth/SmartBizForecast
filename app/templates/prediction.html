@@ -130,7 +130,7 @@
 {% endblock %}
 
 {% block content %}
-<h1>Prediction Dashboard</h1>
+<h1>Automate Your Prediction</h1>
 
 <!-- Display Uploaded Data -->
 <h2>Uploaded Data</h2>
@@ -214,7 +214,7 @@
         </div>
 
         <div style="text-align: center;">
-            <button onclick="url_for('main.model_training')">{{ form.submit }}</button>
+            <a href="url_for('main.model_training')" target="_blank">{{ form.submit }}</a>
         </div>
     </form>
 {% endif %}

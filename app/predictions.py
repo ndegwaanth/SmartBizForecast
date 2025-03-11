@@ -16,18 +16,15 @@ from sklearn.metrics import accuracy_score, f1_score, recall_score, roc_auc_scor
 
 class ChurnPrediction:
     def __init__(self):
-        self.model = SGDClassifier(loss="log_loss", random_state=42)  # Supports incremental learning
+        self.model = SGDClassifier(loss="log_loss", random_state=42)
         self.scaler = StandardScaler()
-        self.encoders = {}  
+        self.encoders = {}
         self.classes = None
-        self.MODEL_PATH = "customer_churn/churn_model.pkl"
-        self.ENCODERS_PATH = "customer_churn/encoders.pkl"
+        self.MODEL_PATH = "customer_churn/churn_model_v2.pkl"
+        self.ENCODERS_PATH = "customer_churn/encoders_v2.pkl"
+        self.FEATURES_PATH = "customer_churn/features.pkl"  # Save feature names
 
-        # Ensure model directory exists
-        if not os.path.exists("customer_churn"):
-            os.makedirs("customer_churn")
-
-        # Load previous model if exists
+        # Load existing model if available
         if os.path.exists(self.MODEL_PATH):
             with open(self.MODEL_PATH, "rb") as f:
                 saved_model = pickle.load(f)
@@ -36,20 +33,41 @@ class ChurnPrediction:
                 self.encoders = saved_model.encoders
                 self.classes = saved_model.classes
 
+        # Load saved feature names
+        if os.path.exists(self.FEATURES_PATH):
+            with open(self.FEATURES_PATH, "rb") as f:
+                self.feature_names = pickle.load(f)
+        else:
+            self.feature_names = None  # No prior features saved
+
     def preprocess_data(self, df, target_column):
-        """Handles missing values and encodes categorical features dynamically."""
+        """Prepares data by handling missing values and encoding categorical features."""
+        
         for col in df.columns:
-            if df[col].dtype == "object":
-                df[col].fillna(df[col].mode()[0], inplace=True)
+            # 🔹 Convert mixed-type categorical columns to strings
+            if df[col].dtype == "object" or df[col].nunique() < 15:
+                df[col] = df[col].astype(str)
+
+                # Fill missing values with most frequent category (safe for mixed types)
+                most_frequent = df[col].mode().astype(str)[0]
+                df[col].fillna(most_frequent, inplace=True)
             else:
+                # 🔹 Fill numerical missing values with median
                 df[col].fillna(df[col].median(), inplace=True)
 
-        # Encode categorical variables dynamically
-        for col in df.select_dtypes(include=["object"]).columns:
+        # Encode categorical variables
+        for col in df.select_dtypes(include=["object", "category"]).columns:
+            df[col] = df[col].astype(str)  # Ensure all categories are strings
+
             if col not in self.encoders:
                 self.encoders[col] = LabelEncoder()
                 df[col] = self.encoders[col].fit_transform(df[col])
             else:
+                known_classes = set(self.encoders[col].classes_)
+                df[col] = df[col].apply(lambda x: x if x in known_classes else "unknown")
+
+                # Update the encoder with the new "unknown" category
+                self.encoders[col].classes_ = np.append(self.encoders[col].classes_, "unknown")
                 df[col] = self.encoders[col].transform(df[col])
 
         # Feature-target split
@@ -193,17 +211,24 @@ class ChurnPrediction:
         return graph_images[:10]
 
 
-def LinearRegression(df):
-    pass
+class SalesPrediction:
 
-def Arima(df):
-    pass
+    def data_preprocessing(self, df):
+        pass
+        
 
-def RandomForest(df):
-    pass
 
-def SVM(df):
-    pass
+# NA values
+# outliers
+# Missing Values
+# 
 
-def Decisiontree(df):
-    pass
+
+class Arima:
+    def arma(self, df):
+        pass
+
+class RandomForest():
+    def RandomForest(df):
+        pass
+

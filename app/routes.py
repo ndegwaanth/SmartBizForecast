@@ -22,6 +22,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 from .predictions import ChurnPrediction
 from flask import jsonify
+from app.descriptive import Descriptive
 
 load_dotenv()
 
@@ -304,3 +305,27 @@ def predict_churn():
         return jsonify({"predictions": predictions.tolist()})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+
+@main_bp.route('/descriptive/statistics/')
+def descriptive():
+    # Ensure dataset exists
+    uploaded_file = session.get('uploaded_file')
+    if not uploaded_file:
+        flash("No dataset found. Please upload a dataset first.", "warning")
+        return redirect(url_for('main.upload_data'))
+
+    file_path = os.path.join(UPLOAD_FOLDER, uploaded_file)
+
+    if file_path.endswith(".csv"):
+        df = pd.read_csv(file_path)
+    elif file_path.endswith(".xlsx"):
+        df = pd.read_excel(file_path)
+    else:
+        flash("Upload required data format", "danger")
+        return redirect(url_for('main.upload_data'))
+
+    # Generate descriptive statistics using Descriptive class
+    stats = Descriptive.generate_descriptive_stats(df)
+
+    return render_template('descriptive.html', stats=stats)

@@ -1,0 +1,63 @@
+{% extends "layout-two.html" %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/descriptive.css') }}">
+<link rel="stylesheet" href="/app/static/css/layour-two.css">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="text-center page-title">Descriptive Statistics Overview</h1>
+
+    <div class="row">
+        {% for key, value in stats.items() %}
+        <div class="col-lg-6 col-md-12 mb-4">
+            <div class="stat-card">
+                <div class="card-header">
+                    <h3>{{ key.replace('_', ' ').title() }}</h3>
+                </div>
+                <div class="card-body">
+                    {% if value is string %}
+                        <p class="stat-text">{{ value }}</p>
+                    {% elif value is mapping %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <tbody>
+                                    {% for subkey, subvalue in value.items() %}
+                                    <tr>
+                                        <th>{{ subkey.replace('_', ' ').title() }}</th>
+                                        <td>{{ subvalue }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% elif value is iterable and value is not string %}
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped">
+                                <thead>
+                                    <tr>
+                                        {% for column in value.columns %}
+                                        <th>{{ column }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in value.itertuples(index=False) %}
+                                    <tr>
+                                        {% for cell in row %}
+                                        <td>{{ cell }}</td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

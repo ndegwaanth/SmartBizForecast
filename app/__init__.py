@@ -12,7 +12,7 @@ from flask_session import Session
 load_dotenv()
 
 # Create Flask app
-app = Flask(__name__)
+app = Flask(__name__, template_folder="templates")
 
 # Ensure SECRET_KEY is always set
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(32))  # Generates a secure key if missing

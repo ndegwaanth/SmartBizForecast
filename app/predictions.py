@@ -16,29 +16,12 @@ from sklearn.metrics import accuracy_score, f1_score, recall_score, roc_auc_scor
 
 class ChurnPrediction:
     def __init__(self):
+        # Initialize the model, scaler, and encoders from scratch
         self.model = SGDClassifier(loss="log_loss", random_state=42)
         self.scaler = StandardScaler()
         self.encoders = {}
         self.classes = None
-        self.MODEL_PATH = "customer_churn/churn_model_v2.pkl"
-        self.ENCODERS_PATH = "customer_churn/encoders_v2.pkl"
-        self.FEATURES_PATH = "customer_churn/features.pkl"  # Save feature names
-
-        # Load existing model if available
-        if os.path.exists(self.MODEL_PATH):
-            with open(self.MODEL_PATH, "rb") as f:
-                saved_model = pickle.load(f)
-                self.model = saved_model.model
-                self.scaler = saved_model.scaler
-                self.encoders = saved_model.encoders
-                self.classes = saved_model.classes
-
-        # Load saved feature names
-        if os.path.exists(self.FEATURES_PATH):
-            with open(self.FEATURES_PATH, "rb") as f:
-                self.feature_names = pickle.load(f)
-        else:
-            self.feature_names = None  # No prior features saved
+        self.feature_names = None  # No need to save feature names
 
     def preprocess_data(self, df, target_column):
         """Prepares data by handling missing values and encoding categorical features."""
@@ -74,10 +57,13 @@ class ChurnPrediction:
         X = df.drop(columns=[target_column])
         y = df[target_column]
 
+        # Save feature names (optional, if needed for reference)
+        self.feature_names = X.columns.tolist()
+
         return X, y
 
     def train_initial_model(self, df, target_column, test_size=0.2, random_state=42):
-        """Trains the model incrementally and returns performance metrics."""
+        """Trains the model from scratch and returns performance metrics."""
         X, y = self.preprocess_data(df, target_column)
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
 
@@ -89,8 +75,8 @@ class ChurnPrediction:
         if self.classes is None:
             self.classes = np.unique(y_train)
 
-        # Train the model incrementally
-        self.model.partial_fit(X_train, y_train, classes=self.classes)
+        # Train the model from scratch
+        self.model.fit(X_train, y_train)
 
         # Evaluate the model
         y_pred = self.model.predict(X_test)
@@ -101,12 +87,6 @@ class ChurnPrediction:
         recall = recall_score(y_test, y_pred)
         roc_auc = roc_auc_score(y_test, y_prob)
         conf_matrix = confusion_matrix(y_test, y_pred).tolist()
-
-        # Save model and encoders
-        with open(self.MODEL_PATH, "wb") as f:
-            pickle.dump(self, f)
-        with open(self.ENCODERS_PATH, "wb") as f:
-            pickle.dump(self.encoders, f)
 
         return {
             "accuracy": accuracy,
@@ -127,7 +107,6 @@ class ChurnPrediction:
         # Ensure categorical columns are detected
         if not categorical_cols:
             categorical_cols = [col for col in df.columns if df[col].nunique() < 15 and df[col].dtype != "number"]
-
 
         # Function to convert plot to Base64
         def plot_to_base64():
@@ -210,12 +189,10 @@ class ChurnPrediction:
 
         return graph_images[:10]
 
-
 class SalesPrediction:
 
     def data_preprocessing(self, df):
         pass
-        
 
 
 # NA values
@@ -231,4 +208,3 @@ class Arima:
 class RandomForest():
     def RandomForest(df):
         pass
-

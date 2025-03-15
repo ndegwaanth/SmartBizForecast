@@ -288,7 +288,6 @@ def model_training():
     return render_template('churnpred.html', metrics=metrics, graphs=graphs, form=form)
 
 
-
 @main_bp.route('/predict_churn', methods=['POST'])
 def predict_churn():
     """Predicts churn for new data provided in JSON format."""

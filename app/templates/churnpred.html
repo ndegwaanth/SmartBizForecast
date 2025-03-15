@@ -90,17 +90,24 @@
             </div>
         </div>
     </div>
-   <!-- Graph Section -->
+
+    <!-- Graph Section -->
     <div class="mt-5">
         <h3 class="text-center text-primary">Churn Prediction Visualizations</h3>
         <div class="row">
-            {% for graph in graphs %}
-            <div class="col-md-6 mt-3">
-                <div class="card shadow p-3">
-                    <img src="data:image/png;base64,{{ graph }}" class="img-fluid rounded" alt="Churn Analysis Graph">
+            {% if graphs %}
+                {% for graph in graphs %}
+                <div class="col-md-6 mt-3">
+                    <div class="card shadow p-3">
+                        <img src="data:image/png;base64,{{ graph }}" class="img-fluid rounded" alt="Churn Analysis Graph">
+                    </div>
                 </div>
-            </div>
-            {% endfor %}
+                {% endfor %}
+            {% else %}
+                <div class="col-12 text-center">
+                    <p class="text-muted">No visualizations available.</p>
+                </div>
+            {% endif %}
         </div>
     </div>
 

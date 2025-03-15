@@ -14,6 +14,7 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score, recall_score, roc_auc_score, confusion_matrix, roc_curve
 
+
 class ChurnPrediction:
     def __init__(self):
         # Initialize the model, scaler, and encoders from scratch
@@ -96,9 +97,12 @@ class ChurnPrediction:
             "confusion_matrix": conf_matrix
         }
 
-    def generate_visualizations(self, df, target_column=None):
-        """Generates exactly 10 useful graphs and returns them as Base64 strings for display in HTML."""
+    def generate_visualizations(self, df, target_column=None, y_pred=None, predictor_variables=None):
+        """Generates useful graphs and returns them as Base64 strings for display in HTML."""
         graph_images = []
+
+        if predictor_variables:
+            df = df[predictor_variables + ([target_column] if target_column in df.columns else [])]
 
         # Identify numerical & categorical columns
         numerical_cols = df.select_dtypes(include=["number"]).columns.tolist()
@@ -123,11 +127,21 @@ class ChurnPrediction:
             plt.title("Feature Correlation Heatmap")
             graph_images.append(plot_to_base64())
 
-        # Churn Distribution
+        # Churn Distribution (Actual vs Predicted)
         if target_column and target_column in df.columns:
-            plt.figure(figsize=(6, 4))
+            plt.figure(figsize=(12, 5))
+
+            # Actual Distribution
+            plt.subplot(1, 2, 1)
             sns.countplot(x=df[target_column], palette="coolwarm")
-            plt.title("Churn Distribution")
+            plt.title("Actual Churn Distribution")
+        
+            # Predicted Distribution (if y_pred is provided)
+            if y_pred is not None:
+                plt.subplot(1, 2, 2)
+                sns.countplot(x=y_pred, palette="coolwarm")
+                plt.title("Predicted Churn Distribution")
+
             graph_images.append(plot_to_base64())
 
         # Histograms for Numerical Features
@@ -152,13 +166,45 @@ class ChurnPrediction:
             plt.title(f"Count of {col}")
             graph_images.append(plot_to_base64())
 
-        # Churn vs Numerical Features
+        # Churn vs Numerical Features (Actual vs Predicted)
         if target_column and target_column in df.columns and numerical_cols:
             for col in numerical_cols[:2]:
-                plt.figure(figsize=(6, 4))
+                plt.figure(figsize=(12, 5))
+
+                # Actual Churn vs Numerical Feature
+                plt.subplot(1, 2, 1)
                 sns.boxplot(x=df[target_column], y=df[col])
-                plt.title(f"{col} vs {target_column}")
+                plt.title(f"Actual {col} vs {target_column}")
+
+                # Predicted Churn vs Numerical Feature (if y_pred is provided)
+                if y_pred is not None:
+                    plt.subplot(1, 2, 2)
+                    sns.boxplot(x=y_pred, y=df[col])
+                    plt.title(f"Predicted {col} vs Churn")
+
                 graph_images.append(plot_to_base64())
+
+        # Confusion Matrix (if y_pred and target_column are provided)
+        if target_column and y_pred is not None:
+            plt.figure(figsize=(6, 4))
+            cm = confusion_matrix(df[target_column], y_pred)
+            sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=self.classes, yticklabels=self.classes)
+            plt.title("Confusion Matrix")
+            plt.xlabel("Predicted")
+            plt.ylabel("Actual")
+            graph_images.append(plot_to_base64())
+
+        # ROC Curve (if y_pred and target_column are provided)
+        if target_column and y_pred is not None:
+            plt.figure(figsize=(6, 4))
+            fpr, tpr, _ = roc_curve(df[target_column], y_pred)
+            plt.plot(fpr, tpr, color="darkorange", lw=2, label="ROC curve")
+            plt.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--")
+            plt.xlabel("False Positive Rate")
+            plt.ylabel("True Positive Rate")
+            plt.title("ROC Curve")
+            plt.legend(loc="lower right")
+            graph_images.append(plot_to_base64())
 
         # Feature Count Plot
         if len(df.columns) > 10:
@@ -187,7 +233,7 @@ class ChurnPrediction:
             plt.title(f"{categorical_cols[0]} vs {numerical_cols[0]}")
             graph_images.append(plot_to_base64())
 
-        return graph_images[:10]
+        return graph_images[:10]  # Return up to 10 graphs
 
 class SalesPrediction:
 

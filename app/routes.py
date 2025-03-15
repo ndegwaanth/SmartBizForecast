@@ -251,6 +251,10 @@ def model_training():
         test_size = float(form.test_size.data or 0.2)  # Default 20% test size
         random_state = int(form.random_state.data or 42)  # Default seed
 
+        # Debugging: Log form data
+        print("Form Data:", form.data)
+        flash(f"Form Data: {form.data}", "info")
+
         # Ensure dataset exists
         uploaded_file = session.get('uploaded_file')
         if not uploaded_file:
@@ -272,21 +276,51 @@ def model_training():
             flash(f"Error loading dataset: {str(e)}", "error")
             return redirect(url_for('main.upload_data'))
 
+        # Debugging: Log dataset info
+        print("Dataset Columns:", df.columns.tolist())
+        print("Dataset Shape:", df.shape)
+        flash(f"Dataset Columns: {df.columns.tolist()}", "info")
+        flash(f"Dataset Shape: {df.shape}", "info")
+
         # Validate selected columns
         missing_columns = [col for col in predictor_variables if col not in df.columns]
         if target_variable not in df.columns or missing_columns:
             flash(f"Invalid columns: {missing_columns} missing.", "danger")
             return redirect(url_for('main.upload_data'))
 
+        # Debugging: Log selected columns
+        print("Target Variable:", target_variable)
+        print("Predictor Variables:", predictor_variables)
+        flash(f"Target Variable: {target_variable}", "info")
+        flash(f"Predictor Variables: {predictor_variables}", "info")
+
         # Train the model and get metrics
-        metrics = churn.train_initial_model(df, target_variable, test_size, random_state)
+        try:
+            metrics = churn.train_initial_model(df, target_variable, test_size, random_state)
+            flash("Model training completed successfully.", "success")
+        except Exception as e:
+            flash(f"Error during model training: {str(e)}", "error")
+            return redirect(url_for('main.model_training'))
 
-        # Generate graphs
-        graphs = churn.generate_visualizations(df, target_variable)
+        # Generate predictions for visualization
+        try:
+            X, y = churn.preprocess_data(df, target_variable)
+            X = churn.scaler.transform(X)  # Scale the features
+            y_pred = churn.model.predict(X)  # X is now a NumPy array (no feature names)
+            flash("Predictions generated successfully.", "success")
+        except Exception as e:
+            flash(f"Error during prediction: {str(e)}", "error")
+            return redirect(url_for('main.model_training'))
 
+        # Generate graphs (passing y_pred for visualization)
+        try:
+            graphs = churn.generate_visualizations(df, target_variable, y_pred, predictor_variables)
+            flash("Graphs generated successfully.", "success")
+        except Exception as e:
+            flash(f"Error during graph generation: {str(e)}", "error")
+            return redirect(url_for('main.model_training'))
 
     return render_template('churnpred.html', metrics=metrics, graphs=graphs, form=form)
-
 
 @main_bp.route('/predict_churn', methods=['POST'])
 def predict_churn():

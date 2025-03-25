@@ -22,8 +22,7 @@ class ChurnPrediction:
         self.scaler = StandardScaler()
         self.encoders = {}
         self.classes = None
-        self.feature_names = None  # No need to save feature names
-
+        self.feature_names = None
     def preprocess_data(self, df, target_column):
         """Prepares data by handling missing values and encoding categorical features."""
         
@@ -236,15 +235,82 @@ class ChurnPrediction:
         return graph_images[:10]  # Return up to 10 graphs
 
 class SalesPrediction:
+    def __init__(self):
+        self.scaler = StandardScaler()
+        self.encoders = {}
 
-    def data_preprocessing(self, df):
+    def clean_sales_data(self, df, target_column=None):
+        """Automatically cleans any sales dataset without knowing its structure."""    
+        # Drop columns with excessive missing values (> 30%)
+        df = df.dropna(thresh=int(0.7 * df.shape[1]))
+
+        # Handle missing values dynamically
+        for col in df.columns:
+            if df[col].dtype == "object":
+                df[col].fillna("Unknown", inplace=True)  # Fill categorical with "Unknown"
+            else:
+                df[col].fillna(df[col].median(), inplace=True)  # Fill numerical with median
+
+        # Remove duplicate rows
+        df = df.drop_duplicates()
+
+        # Detect and convert date columns
+        for col in df.select_dtypes(include=["object"]).columns:
+            try:
+                df[col] = pd.to_datetime(df[col])
+            except:
+                pass
+
+        # Extract features from date columns
+        date_cols = df.select_dtypes(include=["datetime"]).columns
+        for col in date_cols:
+            df[f"{col}_year"] = df[col].dt.year
+            df[f"{col}_month"] = df[col].dt.month
+            df[f"{col}_day"] = df[col].dt.day
+            df[f"{col}_weekday"] = df[col].dt.weekday
+            df.drop(columns=[col], inplace=True)
+
+        # Standardize categorical text (lowercase, remove spaces)
+        for col in df.select_dtypes(include=["object"]).columns:
+            df[col] = df[col].str.lower().str.strip()
+
+        # Encode categorical variables
+        label_encoders = {}
+        for col in df.select_dtypes(include=["object"]).columns:
+            le = LabelEncoder()
+            df[col] = le.fit_transform(df[col])
+            label_encoders[col] = le  # Store encoders for later use
+
+        # Handle numerical outliers (IQR Method)
+        numeric_cols = df.select_dtypes(include=np.number).columns
+        for col in numeric_cols:
+            Q1 = df[col].quantile(0.25)
+            Q3 = df[col].quantile(0.75)
+            IQR = Q3 - Q1
+            outliers = df[(df[col] >= Q1 - 1.5 * IQR) & (df[col] <= Q3 + 1.5 * IQR)]
+            df = df[~outliers.any(axis=1)]
+
+        # Normalize numerical data
+        scaler = StandardScaler()
+        df[numeric_cols] = scaler.fit_transform(df[numeric_cols])
+
+        X = df.drop(columns=[target_column])
+        y = df[target_column]
+
+
+        return X, y
+    
+    def train_initial_model_v2(self, df):
         pass
+    
+    def generate_visualizations_v2(self, df):
+        pass
+
 
 
 # NA values
 # outliers
 # Missing Values
-# 
 
 
 class Arima:

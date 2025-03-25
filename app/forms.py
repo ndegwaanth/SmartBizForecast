@@ -75,7 +75,10 @@ class DynamicForm(FlaskForm):
     )
 
     hyperparameter_tuning = BooleanField('Enable Hyperparameter Tuning', default=False, validators=[Optional()])
-    api_link = StringField('API Link', validators=[Optional(), URL()])
+    api_link = SelectField('Action for Dataset Uploaded', choices=[
+        ('customer_churn_prediction', 'Customer Churn Prediction'),
+        ('sales_prediction', 'Sales Predictions')
+        ]) 
     performance_metrics = SelectField('Performance Metrics', choices=[
         ('accuracy', 'Accuracy'),
         ('precision', 'Precision'),

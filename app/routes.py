@@ -1,6 +1,6 @@
 from .forms import Registration, LoginForm, DynamicForm
 from flask_bcrypt import Bcrypt
-from flask_mysqldb import MySQL
+# from flask_mysqldb import MySQL
 import secrets
 from flask import session, render_template, redirect, request, Blueprint, url_for, flash
 import pandas as pd
@@ -23,6 +23,8 @@ from sklearn.preprocessing import StandardScaler
 from .predictions import ChurnPrediction
 from flask import jsonify
 from app.descriptive import Descriptive
+from datetime import datetime
+from flask import session
 
 load_dotenv()
 
@@ -32,6 +34,25 @@ key = secrets.token_hex(64)
 main_bp = Blueprint('main', __name__)
 bcrypt = Bcrypt()
 
+
+
+# def validate_session():
+#     """Check if session is valid and has required data"""
+#     if 'user_id' not in session:
+#         return False
+#     if 'last_activity' not in session:
+#         return False
+#     # Check if session is expired (1 hour inactivity)
+#     last_activity = session['last_activity']
+#     if (datetime.now() - last_activity).seconds > 3600:
+#         return False
+#     return True
+
+# # Update session activity before each request
+# @main_bp.before_request
+# def update_session_activity():
+#     if 'user_id' in session:
+#         session['last_activity'] = datetime.now()
 
 
 @main_bp.route('/')
@@ -46,7 +67,9 @@ def homepage():
 @main_bp.route('/logout')
 @login_required
 def logout():
+    session.clear()
     logout_user()
+    flash("You have been logged out successfully.")
     return redirect(url_for('main.login'))
 
 
@@ -100,30 +123,35 @@ def register():
     return render_template("register.html", form=form)
 
 
+# @main_bp.route('/login', methods=['POST', 'GET'])
+# def login():
+# from . import collection
+
+
 @main_bp.route('/login', methods=['POST', 'GET'])
 def login():
     from . import collection
+
+    if current_user.is_authenticated:
+        return redirect(url_for('main.homepage'))
+
     form = LoginForm()
     if form.validate_on_submit():
-        # Collecting form data
-        email = form.email.data
-        password = form.password.data
-
-        try:
-            # Finding the user in MongoDB by email
-            user_dict = collection.find_one({"Email": email})
+        user_dict = collection.find_one({"Email": form.email.data})
+        if user_dict and bcrypt.check_password_hash(user_dict["Password"], form.password.data):
+            user = User(user_dict)
+            login_user(user, remember=True)  # Add remember=True
             
-            if user_dict and bcrypt.check_password_hash(user_dict["Password"], password):
-                user = User(user_dict)
-                login_user(user)
-                flash(f"Welcome back, {current_user.username}!", "success")
-                return redirect(url_for('main.homepage'))
-            else:
-                return render_template("login.html", form=form, error="Invalid email or password")
-        except Exception as e:
-            return render_template("login.html", form=form, error="Database error: " + str(e))
-    return render_template("login.html", form=form)
-
+            # Set session variables
+            session['user_id'] = str(user_dict['_id'])
+            session['logged_in'] = True
+            session.permanent = True  # Make session persistent
+            session.modified = True   # Mark session as modified
+            
+            flash('Login successful!', 'success')
+            return redirect(url_for('main.homepage'))
+    
+    return render_template('login.html', form=form)
 
 # Directory where I will store the uploaded files
 UPLOAD_FOLDER = 'data/user'
@@ -137,8 +165,8 @@ if not os.path.exists(UPLOAD_FOLDER):
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-
 @main_bp.route('/upload', methods=['POST', 'GET'])
+@login_required
 def upload_data():
     if request.method == 'POST':
         file = request.files.get('file')
@@ -221,7 +249,6 @@ def prediction():
     
     return render_template('prediction.html', form=form, headers=columns, rows=rows)
 
-
 def run_streamlit():
     streamlit_script = os.path.join(os.path.dirname(__file__), "dashboard.py")
     subprocess.Popen(
@@ -235,7 +262,6 @@ def streamlit_redirect():
 
 
 # Customer Churn Prediction
-# Initialize churn prediction model
 churn = ChurnPrediction()
 
 @main_bp.route('/predict', methods=['GET', 'POST'])

@@ -7,17 +7,35 @@
 {% endblock %}
 
 {% block content %}
-<div class="file-upload-container">
-    <form action="{{ url_for('main.upload_data') }}" method="POST" enctype="multipart/form-data">
-        <!-- Adding the CSRF token here -->
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        
-        <label for="file">Upload CSV or Excel file:</label>
-        <input type="file" name="file" accept=".csv, .xlsx" required>
-        <button type="submit">Upload</button>
-    </form>
+<div class="debug-info">
+    <!-- debug lines -->
+    <p>Login Status: {% if current_user.is_authenticated %}LOGGED IN{% else %}NOT LOGGED IN{% endif %}</p>
+    <p>User: {{ current_user.username if current_user.is_authenticated else 'None' }}</p>
+    <p>Session ID: {{ session.sid if session else 'No session' }}</p>
+    
+    <!-- Your existing form -->
+    <div class="file-upload-container">
+        <form id="uploadForm" action="{{ url_for('main.upload_data') }}" method="POST" enctype="multipart/form-data" onsubmit="return validateForm()">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <label for="file">Upload CSV or Excel file:</label>
+            <input type="file" name="file" id="fileInput" accept=".csv, .xlsx" required>
+            <button type="submit" id="uploadButton">Upload</button>
+        </form>
+    </div>
 </div>
-
+<script>
+function validateForm() {
+    const fileInput = document.getElementById('fileInput');
+    if (!fileInput.files.length) {
+        alert('Please select a file first');
+        return false;
+    }
+    document.getElementById('uploadButton').disabled = true;
+    document.getElementById('uploadButton').textContent = 'Uploading...';
+    return true;
+}
+</script>
 <!-- <h2>Uploaded Data:</h2>
 {% if headers and rows %}
     <table border="1">

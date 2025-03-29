@@ -7,6 +7,8 @@ import os
 from flask_login import LoginManager
 from pymongo import MongoClient
 from flask_session import Session
+from datetime import timedelta
+from .models import User
 
 # Load environment variables
 load_dotenv()
@@ -14,11 +16,28 @@ load_dotenv()
 # Create Flask app
 app = Flask(__name__, template_folder="templates")
 
-# Ensure SECRET_KEY is always set
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(32))  # Generates a secure key if missing
+# Essential configuration
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(32))
 
-# Initialize CSRF protection
+# Flask-Session configuration
+app.config.update({
+    'SESSION_TYPE': 'filesystem',
+    'SESSION_FILE_DIR': './flask_sessions',
+    'SESSION_PERMANENT': True,
+    'PERMANENT_SESSION_LIFETIME': timedelta(days=1),
+    'SESSION_COOKIE_NAME': 'pa_session',
+    'SESSION_COOKIE_SECURE': False,  # True in production
+    'SESSION_COOKIE_HTTPONLY': True,
+    'SESSION_COOKIE_SAMESITE': 'Lax',
+    'SESSION_REFRESH_EACH_REQUEST': True,
+    'SESSION_COOKIE_PATH': 'flask_session/Sessions',
+    'PERMANENT_SESSION_LIFETIME': timedelta(days=7)
+})
+
+
+# Initialize extensions in correct order
 csrf = CSRFProtect(app)
+Session(app)
 
 # MongoDB Configuration
 Mongo_url = os.getenv("MONGODB_URL")
@@ -26,24 +45,30 @@ client = MongoClient(Mongo_url)
 db = client['Users']
 collection = db['users-info']
 
-# Initialize other extensions
 bcrypt = Bcrypt(app)
 
-# Initialize Flask-Login
+# Flask-Login configuration
 login_manager = LoginManager(app)
 login_manager.login_view = 'main.login'
-
-# Flask-Login User Loader
-from .models import User
+login_manager.session_protection = "strong"
 
 @login_manager.user_loader
 def load_user(user_id):
-    # Retrieve user from MongoDB by their ID
-    user_dict = collection.find_one({"_id": user_id})
-    if user_dict:
-        return User(user_dict)
-    return None
+    try:
+        # MongoDB uses ObjectId - ensure proper conversion
+        from bson.objectid import ObjectId
+        user_dict = collection.find_one({"_id": ObjectId(user_id)})
+        if user_dict:
+            return User(user_dict)
+        return None
+    except:
+        return None
 
-# Import and register blueprints
+# Register blueprints
 from .routes import main_bp
 app.register_blueprint(main_bp)
+
+
+# Create session directory if it doesn't exist
+if app.config['SESSION_TYPE'] == 'filesystem':
+    os.makedirs(app.config['SESSION_FILE_DIR'], exist_ok=True)

@@ -78,22 +78,13 @@ class DynamicForm(FlaskForm):
     api_link = SelectField('Action for Dataset Uploaded', choices=[
         ('customer_churn_prediction', 'Customer Churn Prediction'),
         ('sales_prediction', 'Sales Predictions')
-        ]) 
-    performance_metrics = SelectField('Performance Metrics', choices=[
-        ('accuracy', 'Accuracy'),
-        ('precision', 'Precision'),
-        ('recall', 'Recall'),
-        ('f1_score', 'F1 Score'),
-        ('roc_auc', 'ROC AUC')
-    ], validators=[DataRequired()])
+        ])
     test_size = FloatField('Test Size (0.1 - 0.9)', default=0.2, validators=[DataRequired()])
     random_state = IntegerField('Random State', default=42, validators=[DataRequired()])
     model_preferences = SelectField('Model Preferences', choices=[
         ('linear_regression', 'Linear Regression'),
         ('logistic_regression', 'Logistic Regression'),
-        ('random_forest', 'Random Forest'),
-        ('xgboost', 'XGBoost'),
-        ('svm', 'Support Vector Machine')
+        ('ARIMA', 'ARIMA Model'),
     ], validators=[DataRequired()])
     submit = SubmitField('Train Model')
 

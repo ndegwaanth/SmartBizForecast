@@ -13,7 +13,12 @@ from sklearn.linear_model import SGDClassifier
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score, recall_score, roc_auc_score, confusion_matrix, roc_curve
-
+from sklearn.cluster import KMeans
+from statsmodels.tsa.stattools import adfuller
+from statsmodels.tsa.arima.model import ARIMA
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+from statsmodels.tsa.seasonal import seasonal_decompose
 
 class ChurnPrediction:
     def __init__(self):
@@ -247,7 +252,7 @@ class SalesPrediction:
         # Handle missing values dynamically
         for col in df.columns:
             if df[col].dtype == "object":
-                df[col].fillna("Unknown", inplace=True)  # Fill categorical with "Unknown"
+                df[col].fillna(method='bfill', inplace=True) 
             else:
                 df[col].fillna(df[col].median(), inplace=True)  # Fill numerical with median
 
@@ -279,7 +284,7 @@ class SalesPrediction:
         for col in df.select_dtypes(include=["object"]).columns:
             le = LabelEncoder()
             df[col] = le.fit_transform(df[col])
-            label_encoders[col] = le  # Store encoders for later use
+            label_encoders[col] = le
 
         # Handle numerical outliers (IQR Method)
         numeric_cols = df.select_dtypes(include=np.number).columns
@@ -294,23 +299,258 @@ class SalesPrediction:
         scaler = StandardScaler()
         df[numeric_cols] = scaler.fit_transform(df[numeric_cols])
 
-        X = df.drop(columns=[target_column])
-        y = df[target_column]
+        # Balance the dataset
+        if target_column and df[target_column].nunique() == 2:
+            class_counts = df[target_column].value_counts()
+            min_class = class_counts.idxmin()
+            df = df.groupby(target_column, group_keys=False).apply(lambda x: x.sample(class_counts[min_class])).reset_index(drop=True)
+        
+        # Generate interaction features (Feature Crosses)
+        for col1 in numeric_cols:
+            for col2 in numeric_cols:
+                if col1 != col2:
+                    df[f"{col1}_x_{col2}"] = df[col1] * df[col2]
+        
+        # Create lag features for time-series data
+        for col in numeric_cols:
+            df[f"{col}_lag_1"] = df[col].shift(1)  # Previous row value
+            df[f"{col}_lag_7"] = df[col].shift(7)  # Weekly trend
+        
+        # Applying clustering to segment data
+        if len(df) > 5:  # Ensure enough samples for clustering
+            kmeans = KMeans(n_clusters=min(5, len(df)//2))
+            df["cluster_segment"] = kmeans.fit_predict(df[numeric_cols])       
 
-
+        if target_column and target_column in df.columns:
+            X = df.drop(columns=[target_column])
+            y = df[target_column]
+        else:
+            X = df
+            y = None
+        
         return X, y
+
+    def train_initial_model(self, df, target_column, test_size=0.2, random_state=42):
+        """Train ARIMA model on sales data after ensuring stationarity and evaluate it."""
+        df[target_column] = pd.to_numeric(df[target_column], errors='coerce')
+        df.dropna(subset=[target_column], inplace=True)
+
+        # Ensure DateTime index
+        df.index = pd.to_datetime(df.index)
+        df.sort_index(inplace=True)
+
+        # Check stationarity
+        def check_stationarity(series):
+            result = adfuller(series.dropna())
+            return result[1]  # p-value
+
+        p_value = check_stationarity(df[target_column])
+        if p_value > 0.05:
+            df[target_column] = df[target_column].diff().dropna()  # First differencing
+
+        # Train-Test Split
+        train_size = int(len(df) * (1 - test_size))
+        train, test = df[target_column][:train_size], df[target_column][train_size:]
+
+        # Fit ARIMA model
+        self.model = ARIMA(train.dropna(), order=(1,1,1))
+        self.model = self.model.fit()
+        print(self.model.summary())
+
+        # Forecast and Evaluate Model
+        forecast = self.model.forecast(steps=len(test))
+        rmse = np.sqrt(mean_squared_error(test, forecast))
+        mae = mean_absolute_error(test, forecast)
+        r2 = r2_score(test, forecast)
+        aic = self.model.aic
+        bic = self.model.bic
+
+        print(f"Model Evaluation:\nRMSE: {rmse}\nMAE: {mae}\nR2 Score: {r2}\nAIC: {aic}\nBIC: {bic}")
+
+        return {
+            "model": self.model,
+            "rmse": rmse,
+            "mae": mae,
+            "r2": r2,
+            "aic": aic,
+            "bic": bic
+        }
     
-    def train_initial_model_v2(self, df):
-        pass
-    
-    def generate_visualizations_v2(self, df):
-        pass
+    def generate_visualizations(self, df, target_column, forecast=None):
+        """Generates useful time-series graphs for ARIMA model visualization."""
+        graph_images = []
+
+        # Function to convert plot to Base64
+        def plot_to_base64():
+            img = io.BytesIO()
+            plt.savefig(img, format='png', bbox_inches='tight')
+            plt.close()
+            img.seek(0)
+            return base64.b64encode(img.getvalue()).decode('utf8')
+
+        # Time Series Plot
+        plt.figure(figsize=(10, 5))
+        plt.plot(df.index, df[target_column], label='Actual Sales', color='blue')
+        if forecast is not None:
+            plt.plot(forecast.index, forecast, label='Forecast', color='red', linestyle='dashed')
+        plt.title("Sales Over Time")
+        plt.xlabel("Time")
+        plt.ylabel("Sales")
+        plt.legend()
+        graph_images.append(plot_to_base64())
+
+        # Forecast Graphs
+        if forecast is not None:
+            plt.figure(figsize=(10, 5))
+            plt.plot(df.index, df[target_column], label='Actual Sales', color='blue')
+            plt.plot(forecast.index, forecast, label='Forecast', color='red', linestyle='dashed')
+            plt.fill_between(forecast.index, forecast * 0.95, forecast * 1.05, color='red', alpha=0.2)
+            plt.title("Sales Forecast with Confidence Interval")
+            plt.xlabel("Time")
+            plt.ylabel("Sales")
+            plt.legend()
+            graph_images.append(plot_to_base64())
+
+        # Decomposition Plot
+        decomposition = seasonal_decompose(df[target_column], model='additive', period=12)
+        fig, axes = plt.subplots(4, 1, figsize=(10, 8))
+        decomposition.observed.plot(ax=axes[0], title='Observed')
+        decomposition.trend.plot(ax=axes[1], title='Trend')
+        decomposition.seasonal.plot(ax=axes[2], title='Seasonality')
+        decomposition.resid.plot(ax=axes[3], title='Residuals')
+        plt.tight_layout()
+        graph_images.append(plot_to_base64())
+
+        # ACF & PACF Plots
+        fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+        plot_acf(df[target_column].dropna(), ax=axes[0])
+        plot_pacf(df[target_column].dropna(), ax=axes[1])
+        axes[0].set_title("Autocorrelation Function (ACF)")
+        axes[1].set_title("Partial Autocorrelation Function (PACF)")
+        plt.tight_layout()
+        graph_images.append(plot_to_base64())
+
+        # Histogram of Sales Data
+        plt.figure(figsize=(6, 4))
+        sns.histplot(df[target_column], kde=True, bins=20, color='green')
+        plt.title(f"Distribution of {target_column}")
+        graph_images.append(plot_to_base64())
+
+        # Boxplot for Sales Data
+        plt.figure(figsize=(6, 4))
+        sns.boxplot(y=df[target_column], color='orange')
+        plt.title(f"Boxplot of {target_column}")
+        graph_images.append(plot_to_base64())
+
+        # Rolling Mean & Variance
+        rolling_window = 12
+        plt.figure(figsize=(10, 5))
+        plt.plot(df[target_column], label='Original', color='blue')
+        plt.plot(df[target_column].rolling(window=rolling_window).mean(), label='Rolling Mean', color='red')
+        plt.plot(df[target_column].rolling(window=rolling_window).std(), label='Rolling Std', color='black')
+        plt.title("Rolling Mean & Variance")
+        plt.legend()
+        graph_images.append(plot_to_base64())
+
+        # Residual Plot
+        plt.figure(figsize=(6, 4))
+        sns.histplot(decomposition.resid.dropna(), kde=True, color='purple')
+        plt.title("Residual Distribution")
+        graph_images.append(plot_to_base64())
+
+        # Scatter Plot: Sales vs Time
+        plt.figure(figsize=(10, 5))
+        plt.scatter(df.index, df[target_column], color='blue', alpha=0.5)
+        plt.title("Scatter Plot of Sales Over Time")
+        plt.xlabel("Time")
+        plt.ylabel("Sales")
+        plt.grid(True)
+        graph_images.append(plot_to_base64())
+
+        return graph_images[:10]
+
+
+    # def generate_visualizations(self, df, target_column):
+    #     """Generates useful time-series graphs for ARIMA model visualization."""
+    #     graph_images = []
+
+    #     # Function to convert plot to Base64
+    #     def plot_to_base64():
+    #         img = io.BytesIO()
+    #         plt.savefig(img, format='png', bbox_inches='tight')
+    #         plt.close()
+    #         img.seek(0)
+    #         return base64.b64encode(img.getvalue()).decode('utf8')
+
+    #     # Time Series Plot
+    #     plt.figure(figsize=(10, 5))
+    #     plt.plot(df.index, df[target_column], label='Actual Sales', color='blue')
+    #     plt.title("Sales Over Time")
+    #     plt.xlabel("Time")
+    #     plt.ylabel("Sales")
+    #     plt.legend()
+    #     graph_images.append(plot_to_base64())
+
+    #     # Decomposition Plot
+    #     decomposition = seasonal_decompose(df[target_column], model='additive', period=12)
+    #     fig, axes = plt.subplots(4, 1, figsize=(10, 8))
+    #     decomposition.observed.plot(ax=axes[0], title='Observed')
+    #     decomposition.trend.plot(ax=axes[1], title='Trend')
+    #     decomposition.seasonal.plot(ax=axes[2], title='Seasonality')
+    #     decomposition.resid.plot(ax=axes[3], title='Residuals')
+    #     plt.tight_layout()
+    #     graph_images.append(plot_to_base64())
+
+    #     # ACF & PACF Plots
+    #     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+    #     plot_acf(df[target_column].dropna(), ax=axes[0])
+    #     plot_pacf(df[target_column].dropna(), ax=axes[1])
+    #     axes[0].set_title("Autocorrelation Function (ACF)")
+    #     axes[1].set_title("Partial Autocorrelation Function (PACF)")
+    #     plt.tight_layout()
+    #     graph_images.append(plot_to_base64())
+
+    #     # Histogram of Sales Data
+    #     plt.figure(figsize=(6, 4))
+    #     sns.histplot(df[target_column], kde=True, bins=20, color='green')
+    #     plt.title(f"Distribution of {target_column}")
+    #     graph_images.append(plot_to_base64())
+
+    #     # Boxplot for Sales Data
+    #     plt.figure(figsize=(6, 4))
+    #     sns.boxplot(y=df[target_column], color='orange')
+    #     plt.title(f"Boxplot of {target_column}")
+    #     graph_images.append(plot_to_base64())
+
+    #     # Rolling Mean & Variance
+    #     rolling_window = 12
+    #     plt.figure(figsize=(10, 5))
+    #     plt.plot(df[target_column], label='Original', color='blue')
+    #     plt.plot(df[target_column].rolling(window=rolling_window).mean(), label='Rolling Mean', color='red')
+    #     plt.plot(df[target_column].rolling(window=rolling_window).std(), label='Rolling Std', color='black')
+    #     plt.title("Rolling Mean & Variance")
+    #     plt.legend()
+    #     graph_images.append(plot_to_base64())
+
+    #     # Residual Plot
+    #     plt.figure(figsize=(6, 4))
+    #     sns.histplot(decomposition.resid.dropna(), kde=True, color='purple')
+    #     plt.title("Residual Distribution")
+    #     graph_images.append(plot_to_base64())
+
+    #     # Scatter Plot: Sales vs Time
+    #     plt.figure(figsize=(10, 5))
+    #     plt.scatter(df.index, df[target_column], color='blue', alpha=0.5)
+    #     plt.title("Scatter Plot of Sales Over Time")
+    #     plt.xlabel("Time")
+    #     plt.ylabel("Sales")
+    #     plt.grid(True)
+    #     graph_images.append(plot_to_base64())
+
+    #     return graph_images[:10]
 
 
 
-# NA values
-# outliers
-# Missing Values
 
 
 class Arima:

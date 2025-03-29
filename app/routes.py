@@ -25,7 +25,8 @@ from flask import jsonify
 from app.descriptive import Descriptive
 from datetime import datetime
 from flask import session
-
+import numpy as np
+from sklearn.metrics import mean_squared_error
 load_dotenv()
 
 
@@ -262,24 +263,24 @@ def streamlit_redirect():
 
 
 # Customer Churn Prediction
+from .predictions import SalesPrediction
 churn = ChurnPrediction()
+sales = SalesPrediction()
 
 @main_bp.route('/predict', methods=['GET', 'POST'])
 def model_training():
     columns = session.get('columns', [])  # Retrieve column names from session
     form = DynamicForm(columns=columns)
-    metrics = None 
+    metrics = None
     graphs = []  # Initialize empty graph list
+    model_summary = None
 
     if form.validate_on_submit():
         target_variable = form.target_variable.data
         predictor_variables = form.predictor_variables.data
+        model_select = form.model_preferences.data
         test_size = float(form.test_size.data or 0.2)  # Default 20% test size
         random_state = int(form.random_state.data or 42)  # Default seed
-
-        # Debugging: Log form data
-        print("Form Data:", form.data)
-        flash(f"Form Data: {form.data}", "info")
 
         # Ensure dataset exists
         uploaded_file = session.get('uploaded_file')
@@ -302,51 +303,66 @@ def model_training():
             flash(f"Error loading dataset: {str(e)}", "error")
             return redirect(url_for('main.upload_data'))
 
-        # Debugging: Log dataset info
-        print("Dataset Columns:", df.columns.tolist())
-        print("Dataset Shape:", df.shape)
-        flash(f"Dataset Columns: {df.columns.tolist()}", "info")
-        flash(f"Dataset Shape: {df.shape}", "info")
-
         # Validate selected columns
         missing_columns = [col for col in predictor_variables if col not in df.columns]
         if target_variable not in df.columns or missing_columns:
             flash(f"Invalid columns: {missing_columns} missing.", "danger")
             return redirect(url_for('main.upload_data'))
 
-        # Debugging: Log selected columns
-        print("Target Variable:", target_variable)
-        print("Predictor Variables:", predictor_variables)
-        flash(f"Target Variable: {target_variable}", "info")
-        flash(f"Predictor Variables: {predictor_variables}", "info")
+        if model_select == 'logistic_regression':
+            try:
+                metrics = churn.train_initial_model(df, target_variable, test_size, random_state)
+                X, y = churn.preprocess_data(df, target_variable)
+                X = churn.scaler.transform(X)
+                y_pred = churn.model.predict(X)
+                graphs = churn.generate_visualizations(df, target_variable, y_pred, predictor_variables)
+                flash("Model training and visualization completed successfully.", "success")
+            except Exception as e:
+                flash(f"Error during model training: {str(e)}", "error")
+                return redirect(url_for('main.model_training'))
+            
+            return render_template('churnpred.html', metrics=metrics, graphs=graphs, form=form)
 
-        # Train the model and get metrics
-        try:
-            metrics = churn.train_initial_model(df, target_variable, test_size, random_state)
-            flash("Model training completed successfully.", "success")
-        except Exception as e:
-            flash(f"Error during model training: {str(e)}", "error")
+        elif model_select == 'ARIMA':
+            try:
+                df[target_variable] = pd.to_numeric(df[target_variable], errors='coerce')
+                df.dropna(subset=[target_variable], inplace=True)
+
+                model = sales.train_initial_model(df, target_variable, test_size, random_state)
+                flash("ARIMA model training completed successfully.", "success")
+
+                # Get ARIMA predictions
+                forecast = model.forecast(steps=len(df))
+
+                # Evaluate model performance
+                rmse = np.sqrt(mean_squared_error(df[target_variable].iloc[-len(forecast):], forecast))
+                aic = model.aic
+                bic = model.bic
+
+                metrics = {
+                    "RMSE": rmse,
+                    "AIC": aic,
+                    "BIC": bic
+                }
+
+                # Get model summary
+                model_summary = model.summary().as_text()
+                flash(f"Model Metrics - RMSE: {rmse:.4f}, AIC: {aic:.4f}, BIC: {bic:.4f}", "info")
+
+                # Generate graphs
+                graphs = sales.generate_visualizations(df, target_variable, forecast)
+                flash("Graphs generated successfully.", "success")
+
+            except Exception as e:
+                flash(f"Error during ARIMA model training: {str(e)}", "error")
+                return redirect(url_for('main.model_training'))
+
+            return render_template('sales.html', metrics=metrics, graphs=graphs, form=form, model_summary=model_summary)
+
+        else:
+            flash('The selected model has not been implemented yet.', 'warning')
             return redirect(url_for('main.model_training'))
 
-        # Generate predictions for visualization
-        try:
-            X, y = churn.preprocess_data(df, target_variable)
-            X = churn.scaler.transform(X)  # Scale the features
-            y_pred = churn.model.predict(X)  # X is now a NumPy array (no feature names)
-            flash("Predictions generated successfully.", "success")
-        except Exception as e:
-            flash(f"Error during prediction: {str(e)}", "error")
-            return redirect(url_for('main.model_training'))
-
-        # Generate graphs (passing y_pred for visualization)
-        try:
-            graphs = churn.generate_visualizations(df, target_variable, y_pred, predictor_variables)
-            flash("Graphs generated successfully.", "success")
-        except Exception as e:
-            flash(f"Error during graph generation: {str(e)}", "error")
-            return redirect(url_for('main.model_training'))
-
-    return render_template('churnpred.html', metrics=metrics, graphs=graphs, form=form)
 
 @main_bp.route('/predict_churn', methods=['POST'])
 def predict_churn():

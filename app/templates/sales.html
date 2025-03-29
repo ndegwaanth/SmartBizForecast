@@ -1,0 +1,84 @@
+{% extends "layout-two.html" %}
+
+{% block title %}Sales Prediction{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card shadow-lg p-4">
+        <h2 class="text-center text-primary fw-bold">📊 Sales Prediction Results</h2>
+
+        <!-- Metrics Display -->
+        {% if metrics %}
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <h4>RMSE</h4>
+                    <p class="metric-value">{{ metrics['RMSE'] | round(4) }}</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <h4>AIC</h4>
+                    <p class="metric-value">{{ metrics['AIC'] | round(4) }}</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <h4>BIC</h4>
+                    <p class="metric-value">{{ metrics['BIC'] | round(4) }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Model Summary -->
+        {% if model_summary %}
+        <div class="card mt-4 p-3 shadow-sm">
+            <h3 class="text-center text-secondary">📜 ARIMA Model Summary</h3>
+            <pre class="summary-box">{{ model_summary }}</pre>
+        </div>
+        {% endif %}
+
+        <!-- Graphs Display -->
+        {% if graphs %}
+        <div class="mt-4">
+            <h3 class="text-center text-success">📈 Visualization of Predictions</h3>
+            <div class="row">
+                {% for graph in graphs %}
+                <div class="col-md-6 mb-3">
+                    <div class="graph-container">
+                        <img src="data:image/png;base64,{{ graph }}" class="img-fluid shadow rounded" alt="Prediction Graph">
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .metric-card {
+        text-align: center;
+        background: linear-gradient(135deg, #1e3c72, #2a5298);
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.2);
+    }
+    .metric-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+    }
+    .summary-box {
+        background: #f8f9fa;
+        padding: 15px;
+        border-left: 5px solid #007bff;
+        font-family: monospace;
+        white-space: pre-wrap;
+    }
+    .graph-container {
+        text-align: center;
+    }
+</style>
+{% endblock %}

@@ -1,49 +1,188 @@
-/* Center the file upload container */
-.file-upload-container {
+/* Base Styles */
+:root {
+    --primary-color: #4361ee;
+    --primary-hover: #3a56d4;
+    --secondary-color: #3f37c9;
+    --dark-color: #1a1a2e;
+    --light-color: #f8f9fa;
+    --sidebar-width: 280px;
+    --border-radius: 12px;
+    --box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f7ff;
+    color: #333;
+}
+
+/* Dashboard Container */
+.dashboard-container {
+    padding: 20px;
+    max-width: 1800px;
+    margin: 0 auto;
+}
+
+/* Debug Panel */
+.debug-panel .card-body {
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+}
+
+.debug-panel code {
+    color: #e83e8c;
+    background-color: #f8f9fa;
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+/* Sidebar */
+.sidebar {
+    position: sticky;
+    top: 20px;
+    height: calc(100vh - 40px);
+    overflow-y: auto;
+}
+
+.sidebar .card {
+    border: none;
+    border-radius: var(--border-radius);
+}
+
+.sidebar .card-header {
+    border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
+}
+
+/* Main Content */
+.main-content {
+    padding-left: 30px;
+}
+
+/* Stat Cards */
+.stat-card {
+    padding: 15px;
+    border-radius: var(--border-radius);
+    position: relative;
+    overflow: hidden;
+    height: 120px;
+    box-shadow: var(--box-shadow);
+    transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+
+.stat-card h6 {
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+    opacity: 0.9;
+}
+
+.stat-card h3 {
+    font-weight: 700;
+    margin-bottom: 0;
+}
+
+.stat-card i {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    font-size: 2.5rem;
+    opacity: 0.3;
+}
+
+/* Table Styling */
+.table-responsive {
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+.table thead th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+/* Empty State */
+.empty-state {
+    background-color: #f8f9fa;
+    border-radius: var(--border-radius);
+}
+
+/* Chart Placeholders */
+.chart-placeholder {
+    background-color: white;
+    border-radius: var(--border-radius);
+    padding: 30px;
+    text-align: center;
+    box-shadow: var(--box-shadow);
+    height: 250px;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
-    height: 100vh; /* Full viewport height */
-    background-color: #f8f9fa; /* Optional: Light background color */
+    color: #6c757d;
+    border: 1px dashed #dee2e6;
 }
 
-/* Style the file upload element */
-.file-upload {
-    text-align: center;
-    padding: 2rem;
-    border: 2px dashed #6c757d; /* Dashed border for file upload area */
-    border-radius: 8px;
-    background-color: #ffffff; /* White background */
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+.chart-placeholder i {
+    margin-bottom: 15px;
 }
 
-/* Label for the file input */
-.file-upload label {
-    font-size: 1.2rem;
-    color: #343a40; /* Dark text color */
-    margin-bottom: 1rem;
-    display: block;
-    font-weight: bold;
-}
-
-/* File input field styling */
-.file-upload input[type="file"] {
-    font-size: 1rem;
-    padding: 0.5rem;
+/* Upload Modal */
+.upload-area {
+    background-color: #f8fafc;
+    transition: all 0.3s ease;
     cursor: pointer;
-    margin-top: 1rem;
 }
 
-/* Add hover effects */
-.file-upload input[type="file"]:hover {
-    background-color: #e9ecef; /* Light hover background */
-    border-color: #adb5bd; /* Subtle hover border color */
+.upload-area.highlight {
+    background-color: #e9f0fd;
+    border-color: var(--primary-color);
 }
 
-/* Responsive adjustments */
+.upload-icon {
+    font-size: 3rem;
+}
+
+.file-input-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.file-input-wrapper input[type="file"] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 992px) {
+    .sidebar {
+        height: auto;
+        position: static;
+        margin-bottom: 20px;
+    }
+    
+    .main-content {
+        padding-left: 15px;
+    }
+}
+
 @media (max-width: 768px) {
-    .file-upload {
-        width: 90%; /* Reduce width for smaller screens */
-        padding: 1.5rem;
+    .stat-card {
+        margin-bottom: 15px;
+    }
+    
+    .dashboard-container {
+        padding: 15px;
     }
 }

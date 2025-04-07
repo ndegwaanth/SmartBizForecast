@@ -1,61 +1,283 @@
-/* Form Container */
-.login-form-container {
-    max-width: 400px;
-    margin: 2rem auto;
-    padding: 2rem;
-    background-color: white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
+/* Base Styles */
+:root {
+    --primary-color: #4361ee;
+    --primary-hover: #3a56d4;
+    --secondary-color: #3f37c9;
+    --dark-color: #1a1a2e;
+    --light-color: #f8f9fa;
+    --google-red: #db4437;
+    --facebook-blue: #4267B2;
+    --github-black: #333;
+    --border-radius: 12px;
+    --box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }
 
-.login-form-container h1 {
-    text-align: center;
-    color: #4b0082;
-    margin-bottom: 1.5rem;
-}
-
-/* Form Groups */
-.form-group {
-    margin-bottom: 1rem;
-}
-
-.form-label {
-    display: block;
-    font-weight: bold;
-    margin-bottom: 0.5rem;
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f7ff;
     color: #333;
+    overflow-x: hidden;
 }
 
-.form-input {
-    width: 100%;
-    padding: 0.5rem;
-    font-size: 1rem;
-    border: 1px solid #ccc;
-    border-radius: 5px;
+/* Login Container */
+.login-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
 }
 
-/* Button */
-.btn {
-    display: block;
+/* Form Section */
+.form-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 3rem;
+    background-color: white;
+    min-height: 100vh;
+}
+
+.form-wrapper {
+    max-width: 500px;
     width: 100%;
-    padding: 0.75rem;
-    background-color: #4b0082;
-    color: white;
+    padding: 2rem;
+}
+
+.header h1 {
+    color: var(--dark-color);
+    margin-bottom: 0.5rem;
+}
+
+.header p {
+    color: #6c757d;
+}
+
+.brand-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.brand-logo i {
+    margin-right: 10px;
+    font-size: 2rem;
+}
+
+/* Form Elements */
+.form-floating {
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.form-floating label {
+    color: #6c757d;
+}
+
+.form-control {
+    height: 56px;
+    border-radius: var(--border-radius);
+    border: 1px solid #e0e0e0;
+    padding: 0 16px;
     font-size: 1rem;
-    text-align: center;
-    border: none;
-    border-radius: 5px;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
+}
+
+.password-toggle {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
     cursor: pointer;
-    transition: background-color 0.3s;
+    color: #6c757d;
+    z-index: 10;
 }
 
-.btn:hover {
-    background-color: #6a0dad;
+.password-toggle:hover {
+    color: var(--primary-color);
 }
 
-/* Error Messages */
-.form-error {
-    color: red;
-    font-size: 0.9rem;
-    margin-top: 0.5rem;
+/* Divider */
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: #6c757d;
+}
+
+.divider::before,
+.divider::after {
+    content: "";
+    flex: 1;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.divider:not(:empty)::before {
+    margin-right: 1em;
+}
+
+.divider:not(:empty)::after {
+    margin-left: 1em;
+}
+
+/* Social Buttons */
+.btn-social {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+}
+
+.btn-google {
+    background-color: var(--google-red);
+}
+
+.btn-facebook {
+    background-color: var(--facebook-blue);
+}
+
+.btn-github {
+    background-color: var(--github-black);
+}
+
+.btn-social:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Promo Section */
+.promo-section {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 3rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.promo-section::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+}
+
+.promo-wrapper {
+    max-width: 500px;
+    width: 100%;
+    z-index: 1;
+}
+
+/* Testimonial */
+.testimonial {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.testimonial .quote {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.testimonial .quote i {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0.3;
+    font-size: 1.5rem;
+}
+
+.testimonial .author {
+    display: flex;
+    align-items: center;
+}
+
+.testimonial .author img {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+}
+
+/* Features List */
+.features {
+    margin-top: 2rem;
+}
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+.feature-item i {
+    margin-right: 12px;
+    font-size: 1.3rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Submit Button */
+.btn-primary {
+    background-color: var(--primary-color);
+    border: none;
+    border-radius: var(--border-radius);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(67, 97, 238, 0.3);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 992px) {
+    .form-section, .promo-section {
+        min-height: auto;
+    }
+    
+    .promo-section {
+        padding: 3rem 2rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .login-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+    
+    .form-wrapper {
+        padding: 1rem;
+    }
+    
+    .brand-logo {
+        font-size: 1.5rem;
+    }
+    
+    .brand-logo i {
+        font-size: 1.75rem;
+    }
 }

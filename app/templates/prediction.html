@@ -1,216 +1,576 @@
 {% extends "layout-two.html" %}
 
-{% block title %}Prediction{% endblock %}
+{% block title %}Predictive Modeling | Predictive Analytics{% endblock %}
 
 {% block styles %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/prediction.css') }}">
-<style>
-    body {
-        font-family: Arial, sans-serif;
-        background-color: #f5f7fa;
-        margin: 20px;
-    }
 
-    h1, h2 {
-        color: #2c3e50;
-        text-align: center;
-    }
-
-    table {
-        width: 90%;
-        margin: 20px auto;
-        border-collapse: collapse;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        background-color: white;
-    }
-
-    th, td {
-        padding: 12px 15px;
-        border: 1px solid #ddd;
-        text-align: center;
-    }
-
-    th {
-        background-color: #2c3e50;
-        color: white;
-    }
-
-    tr:nth-child(even) {
-        background-color: #f9f9f9;
-    }
-
-    form {
-        max-width: 600px;
-        margin: 30px auto;
-        padding: 20px;
-        background: white;
-        border-radius: 10px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    }
-
-    form div {
-        margin-bottom: 15px;
-    }
-
-    label {
-        display: block;
-        font-weight: bold;
-        margin-bottom: 5px;
-        color: #34495e;
-    }
-
-    input[type="text"], input[type="number"], select, textarea {
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        box-sizing: border-box;
-    }
-
-    input[type="checkbox"] {
-        margin-right: 10px;
-    }
-
-    button, input[type="submit"] {
-        background-color: #2980b9;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 5px;
-        cursor: pointer;
-        transition: background 0.3s ease;
-    }
-
-    button:hover, input[type="submit"]:hover {
-        background-color: #1c5985;
-    }
-
-    @media (max-width: 768px) {
-        table, form {
-            width: 95%;
-        }
-    }
-    input[type="checkbox"] {
-        transform: scale(1.2);
-        margin-right: 8px;
-        cursor: pointer;
-    }
-    label {
-        font-weight: 500;
-        cursor: pointer;
-    }
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        background-color: white;
-    }
-
-    th, td {
-        padding: 12px 15px;
-        border: 1px solid #ddd;
-        text-align: center;
-        white-space: nowrap;  /* Prevent text from wrapping */
-    }
-
-    thead th {
-        position: sticky;      /* Keep headers sticky */
-        top: 0;
-        background-color: #2c3e50;
-        color: white;
-        z-index: 1;
-    }
-
-    div[style*="overflow-y: auto"] {
-        max-height: 400px;     /* Set max height for scrolling */
-        overflow-y: auto;      /* Enable vertical scrolling */
-        overflow-x: auto;      /* Enable horizontal scrolling if needed */
-    }
-
-</style>
 {% endblock %}
 
 {% block content %}
-<h1>Automate Your Prediction</h1>
+<div class="container-fluid prediction-container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Header Section -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h1 class="mb-0 text-center">
+                        <i class="fas fa-robot me-2"></i>Automated Predictive Modeling
+                    </h1>
+                </div>
+                <div class="card-body">
+                    <p class="lead text-center text-muted">
+                        Configure your machine learning model and generate predictions with just a few clicks
+                    </p>
+                </div>
+            </div>
 
-<!-- Display Uploaded Data -->
-<h2>Uploaded Data</h2>
-{% if headers and rows %}
-    <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ccc; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-        <table>
-            <thead>
-                <tr>
-                    {% for header in headers %}
-                        <th>{{ header }}</th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in rows %}
-                    <tr>
-                        {% for cell in row %}
-                            <td>{{ cell }}</td>
-                        {% endfor %}
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-{% else %}
-    <p style="text-align: center; color: #7f8c8d;">No data uploaded yet.</p>
-{% endif %}
+            <!-- Data Preview Section -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h2 class="mb-0">
+                        <i class="fas fa-table me-2 text-primary"></i>Dataset Preview
+                        <span class="badge bg-secondary float-end">{{ headers|length }} columns</span>
+                    </h2>
+                </div>
+                <div class="card-body p-0">
+                    {% if headers and rows %}
+                    <div class="table-responsive" style="max-height: 400px;">
+                        <table class="table table-striped table-hover mb-0">
+                            <thead class="sticky-top bg-light">
+                                <tr>
+                                    {% for header in headers %}
+                                    <th class="align-middle">
+                                        <div class="d-flex align-items-center">
+                                            <span>{{ header }}</span>
+                                            <button class="btn btn-sm btn-outline-secondary ms-2 py-0 px-1 column-info-btn" 
+                                                    data-bs-toggle="tooltip" 
+                                                    data-column="{{ header }}"
+                                                    title="View column stats">
+                                                <i class="fas fa-info-circle"></i>
+                                            </button>
+                                        </div>
+                                    </th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in rows %}
+                                <tr>
+                                    {% for cell in row %}
+                                    <td>{{ cell }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-database fa-4x text-muted mb-3"></i>
+                        <h5>No Data Available</h5>
+                        <p class="text-muted">Please upload your dataset to begin analysis</p>
+                        <a href="{{ url_for('main.upload_data') }}" class="btn btn-primary">
+                            <i class="fas fa-cloud-upload-alt me-2"></i>Upload Dataset
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
 
+            <!-- Model Configuration Section -->
+            {% if form %}
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h2 class="mb-0">
+                        <i class="fas fa-sliders-h me-2 text-primary"></i>Model Configuration
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <form id="modelForm" action="{{ url_for('main.model_training') }}" method="POST" class="needs-validation" novalidate>
+                        {{ form.hidden_tag() }}
 
-<!-- Model Training Form -->
-{% if form %}
-    <h2>Model Training Form</h2>
-    <form action="{{ url_for('main.model_training') }}" method="POST">
-        {{ form.hidden_tag() }}
+                        <!-- Target Variable Selection -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ form.target_variable(class="form-select") }}
+                                    {{ form.target_variable.label }}
+                                    <div class="invalid-feedback">
+                                        Please select a target variable
+                                    </div>
+                                </div>
+                                <small class="text-muted">The variable you want to predict</small>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ form.model_preferences(class="form-select") }}
+                                    {{ form.model_preferences.label }}
+                                    <div class="invalid-feedback">
+                                        Please select a model type
+                                    </div>
+                                </div>
+                                <small class="text-muted">The algorithm to use for prediction</small>
+                            </div>
+                        </div>
 
-        <div>
-            {{ form.target_variable.label }}
-            {{ form.target_variable }}
+                        <!-- Predictor Variables -->
+                        <div class="mb-4">
+                            <h5 class="mb-3">
+                                <i class="fas fa-list-check me-2"></i>Select Predictor Variables
+                            </h5>
+                            <div class="form-floating">
+                                {{ form.predictor_variables(class="form-select", size=5) }}
+                                <label for="{{ form.predictor_variables.id }}">Select one or more predictors</label>
+                                <div class="invalid-feedback">
+                                    {{ form.predictor_variables.errors[0] if form.predictor_variables.errors }}
+                                </div>
+                                <small class="text-muted">Hold Ctrl/Cmd to select multiple options</small>
+                            </div>
+                        </div>
+
+                        <!-- Advanced Options -->
+                        <div class="accordion mb-4" id="advancedOptions">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" 
+                                            data-bs-toggle="collapse" data-bs-target="#advancedCollapse">
+                                        <i class="fas fa-cog me-2"></i>Advanced Options
+                                    </button>
+                                </h2>
+                                <div id="advancedCollapse" class="accordion-collapse collapse" 
+                                     data-bs-parent="#advancedOptions">
+                                    <div class="accordion-body">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="{{ form.test_size.id }}" class="form-label">
+                                                    Test Set Size ({{ form.test_size.data }}%)
+                                                </label>
+                                                {{ form.test_size(class="form-range", min="10", max="50", step="5") }}
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <div class="form-floating">
+                                                    {{ form.random_state(class="form-control") }}
+                                                    {{ form.random_state.label }}
+                                                </div>
+                                            </div>
+                                            <div class="col-12">
+                                                <div class="form-check form-switch">
+                                                    {{ form.hyperparameter_tuning(class="form-check-input") }}
+                                                    <label class="form-check-label" for="{{ form.hyperparameter_tuning.id }}">
+                                                        Enable Hyperparameter Tuning
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Submission -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="reset" class="btn btn-outline-secondary me-md-2">
+                                <i class="fas fa-undo me-2"></i>Reset
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-play me-2"></i>Train Model
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
         </div>
+    </div>
+</div>
 
-        <div>
-            {{ form.predictor_variables.label }}
-            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-                {% for subfield in form.predictor_variables %}
-                    <label style="display: flex; align-items: center; gap: 5px;">
-                        {{ subfield }} {{ subfield.label.text }}
-                    </label>
-                {% endfor %}
+<!-- Column Stats Modal -->
+<div class="modal fade" id="columnStatsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="columnStatsModalTitle">Column Statistics</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">Basic Info</h6>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-sm">
+                                    <tbody id="basicStats">
+                                        <!-- Will be populated by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">Advanced Metrics</h6>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-sm" id="advancedStats">
+                                    <!-- Will be populated by JavaScript -->
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card mt-3">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">Distribution</h6>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="columnDistributionChart" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
+    </div>
+</div>
 
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Global variables
+let columnStatsModal = null;
+let columnChart = null;
 
-        <div>
-            {{ form.hyperparameter_tuning.label }}
-            {{ form.hyperparameter_tuning }}
-        </div>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('modelForm');
+    
+    form.addEventListener('submit', function(event) {
+        // Check if at least one predictor is selected
+        const predictorSelect = document.getElementById('{{ form.predictor_variables.id }}');
+        if (predictorSelect.selectedOptions.length === 0) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Add error styling
+            predictorSelect.classList.add('is-invalid');
+            
+            // Ensure error message is visible
+            const errorDiv = predictorSelect.nextElementSibling.nextElementSibling;
+            if (errorDiv) {
+                errorDiv.style.display = 'block';
+            }
+        }
+        
+        form.classList.add('was-validated');
+    });
 
-        <div>
-            {{ form.model_preferences.label }}
-            {{ form.model_preferences }}
-        </div>
+    // Clear validation when selection changes
+    document.getElementById('{{ form.predictor_variables.id }}').addEventListener('change', function() {
+        this.classList.remove('is-invalid');
+        const errorDiv = this.nextElementSibling.nextElementSibling;
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+        }
+    });
+});
 
-        <div>
-            {{ form.test_size.label }}
-            {{ form.test_size }}
-        </div>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize modal
+    columnStatsModal = new bootstrap.Modal(document.getElementById('columnStatsModal'));
+    
+    // Enable tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
 
-        <div>
-            {{ form.random_state.label }}
-            {{ form.random_state }}
-        </div>
+    // Form validation
+    const form = document.getElementById('modelForm');
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    }, false);
 
-        <div>
-            {{ form.model_preferences.label }}
-            {{ form.model_preferences }}
-        </div>
+    // Update range input label
+    const testSizeInput = document.getElementById('{{ form.test_size.id }}');
+    const testSizeLabel = testSizeInput.previousElementSibling;
+    testSizeInput.addEventListener('input', function() {
+        testSizeLabel.textContent = `Test Set Size (${this.value}%)`;
+    });
 
-        <div style="text-align: center;">
-            <a href="url_for('main.model_training')" target="_blank">{{ form.submit }}</a>
-        </div>
-    </form>
-{% endif %}
+    // Column stats click handlers
+    document.querySelectorAll('.column-info-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const columnName = this.getAttribute('data-column');
+            loadColumnStats(columnName);
+        });
+    });
+});
+
+function loadColumnStats(columnName) {
+    // Show loading state
+    document.getElementById('basicStats').innerHTML = '<tr><td colspan="2" class="text-center py-3"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></td></tr>';
+    document.getElementById('advancedStats').innerHTML = '<tr><td colspan="2" class="text-center py-3"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></td></tr>';
+    
+    fetch(`/api/column_stats/${encodeURIComponent(columnName)}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            // Update modal title
+            document.getElementById('columnStatsModalTitle').textContent = 
+                `Column Statistics: ${data.name}`;
+            
+            // Populate basic stats
+            const basicStats = document.getElementById('basicStats');
+            basicStats.innerHTML = `
+                <tr>
+                    <th>Data Type</th>
+                    <td>${data.dtype}</td>
+                </tr>
+                <tr>
+                    <th>Total Values</th>
+                    <td>${data.count.toLocaleString()}</td>
+                </tr>
+                <tr>
+                    <th>Missing Values</th>
+                    <td>${data.missing.toLocaleString()} (${((data.missing/data.count)*100).toFixed(1)}%)</td>
+                </tr>
+                <tr>
+                    <th>Unique Values</th>
+                    <td>${data.unique.toLocaleString()}</td>
+                </tr>
+            `;
+            
+            // Populate advanced stats
+            const advancedStats = document.getElementById('advancedStats');
+            if (data.type === 'numeric') {
+                advancedStats.innerHTML = `
+                    <tr>
+                        <th>Minimum</th>
+                        <td>${typeof data.min === 'number' ? data.min.toFixed(2) : data.min}</td>
+                    </tr>
+                    <tr>
+                        <th>Maximum</th>
+                        <td>${typeof data.max === 'number' ? data.max.toFixed(2) : data.max}</td>
+                    </tr>
+                    <tr>
+                        <th>Mean</th>
+                        <td>${typeof data.mean === 'number' ? data.mean.toFixed(2) : data.mean}</td>
+                    </tr>
+                    <tr>
+                        <th>Median</th>
+                        <td>${typeof data.median === 'number' ? data.median.toFixed(2) : data.median}</td>
+                    </tr>
+                    <tr>
+                        <th>Standard Deviation</th>
+                        <td>${typeof data.std === 'number' ? data.std.toFixed(2) : data.std}</td>
+                    </tr>
+                `;
+                
+                // Create histogram chart
+                renderHistogramChart(data);
+            } else {
+                let topValuesHtml = '';
+                for (const [value, count] of Object.entries(data.top_values)) {
+                    topValuesHtml += `
+                        <tr>
+                            <td>${value || 'NULL'}</td>
+                            <td>${count.toLocaleString()}</td>
+                            <td>${((count/data.count)*100).toFixed(1)}%</td>
+                        </tr>
+                    `;
+                }
+                
+                advancedStats.innerHTML = `
+                    <tr>
+                        <th colspan="3">Top Values</th>
+                    </tr>
+                    <tr>
+                        <th>Value</th>
+                        <th>Count</th>
+                        <th>Percentage</th>
+                    </tr>
+                    ${topValuesHtml}
+                `;
+                
+                // Create bar chart for categorical data
+                renderBarChart(data);
+            }
+            
+            // Show the modal
+            columnStatsModal.show();
+        })
+        .catch(error => {
+            console.error('Error loading column stats:', error);
+            document.getElementById('basicStats').innerHTML = `
+                <tr>
+                    <td colspan="2" class="text-center text-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${error.message}
+                    </td>
+                </tr>
+            `;
+            document.getElementById('advancedStats').innerHTML = '';
+            
+            // Still show the modal to display the error
+            columnStatsModal.show();
+        });
+}
+
+function renderHistogramChart(data) {
+    const ctx = document.getElementById('columnDistributionChart').getContext('2d');
+    
+    // Destroy previous chart if exists
+    if (columnChart) {
+        columnChart.destroy();
+    }
+    
+    // Prepare histogram data
+    const bins = Object.keys(data.histogram.values).map(bin => {
+        // Format bin ranges nicely (e.g., "(10.0, 20.0]" -> "10-20")
+        return bin.replace(/[()[\]]/g, '').split(',').map(parseFloat)
+                 .map(n => Number.isInteger(n) ? n : n.toFixed(1))
+                 .join(' - ');
+    });
+    
+    const values = Object.values(data.histogram.values);
+    
+    columnChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: bins,
+            datasets: [{
+                label: 'Frequency',
+                data: values,
+                backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: `Distribution of ${data.name}`,
+                    font: {
+                        size: 14
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `Count: ${context.raw.toLocaleString()}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Frequency'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return Number.isInteger(value) ? value : '';
+                        }
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: data.name
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderBarChart(data) {
+    const ctx = document.getElementById('columnDistributionChart').getContext('2d');
+    
+    // Destroy previous chart if exists
+    if (columnChart) {
+        columnChart.destroy();
+    }
+    
+    const labels = Object.keys(data.top_values).map(label => label || 'NULL');
+    const values = Object.values(data.top_values);
+    
+    columnChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Count',
+                data: values,
+                backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: `Top Values in ${data.name}`,
+                    font: {
+                        size: 14
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const percentage = ((context.raw/data.count)*100).toFixed(1);
+                            return `${context.raw.toLocaleString()} (${percentage}%)`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Count'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return Number.isInteger(value) ? value : '';
+                        }
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Values'
+                    }
+                }
+            }
+        }
+    });
+}
+</script>
 {% endblock %}

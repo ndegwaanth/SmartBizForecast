@@ -1,6 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, EmailField, PasswordField, SubmitField, SelectField, SelectMultipleField, FloatField, IntegerField, BooleanField
 from wtforms.validators import EqualTo, DataRequired, Email, Length, DataRequired, Optional, URL
+from wtforms import ValidationError
 
 class Registration(FlaskForm):
     firstname = StringField('First Name', validators=[DataRequired(), Length(min=2, max=50)])
@@ -68,10 +69,17 @@ class DynamicForm(FlaskForm):
     target_variable = SelectField('Target Variable', validators=[DataRequired()])
 
     # Use checkboxes for predictor variables
+    # predictor_variables = SelectMultipleField(
+    #     'Predictor Variables',
+    #     option_widget=widgets.CheckboxInput(),  
+    #     widget=widgets.ListWidget(prefix_label=False), 
+    # )
+
     predictor_variables = SelectMultipleField(
         'Predictor Variables',
-        option_widget=widgets.CheckboxInput(),  
-        widget=widgets.ListWidget(prefix_label=False), 
+        validators=[DataRequired()],
+        choices=[],  # Will be populated
+        render_kw={'class': 'form-select', 'size': '8'}
     )
 
     hyperparameter_tuning = BooleanField('Enable Hyperparameter Tuning', default=False, validators=[Optional()])
@@ -92,4 +100,17 @@ class DynamicForm(FlaskForm):
         super(DynamicForm, self).__init__(*args, **kwargs)
         self.target_variable.choices = [(col, col) for col in columns]
         self.predictor_variables.choices = [(col, col) for col in columns]
+    
+    def validate_predictor_variables(self, field):
+        if not field.data or len(field.data) == 0:
+            raise ValidationError('Please select at least one predictor variable')
 
+
+class ForgotPasswordForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    submit = SubmitField('Generate Reset Link')
+
+class ResetPasswordForm(FlaskForm):
+    password = PasswordField('New Password', validators=[DataRequired(), Length(min=6)])
+    confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password', message='Passwords must match.')])
+    submit = SubmitField('Reset Password')

@@ -1,70 +1,252 @@
-/* Container for the two forms */
-.signup-container {
+/* Base Styles */
+:root {
+    --primary-color: #4361ee;
+    --primary-hover: #3a56d4;
+    --secondary-color: #3f37c9;
+    --dark-color: #1a1a2e;
+    --light-color: #f8f9fa;
+    --success-color: #4cc9f0;
+    --google-red: #db4437;
+    --facebook-blue: #4267B2;
+    --github-black: #333;
+    --border-radius: 12px;
+    --box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f7ff;
+    color: #333;
+    overflow-x: hidden;
+}
+
+/* Registration Container */
+.registration-container {
+    min-height: 100vh;
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin: 2rem auto;
-    max-width: 1200px;
-    gap: 2rem;
+    align-items: center;
 }
 
-/* Registration Form (Left) */
-.registration-form {
-    flex: 1;
-    padding: 1rem;
-    background-color: #f9f9f9;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.registration-form h3 {
-    margin-bottom: 1rem;
-    color: #4b0082;
-}
-
-.registration p {
-    margin-bottom: 1rem;
-}
-
-.form-error {
-    color: red;
-    font-size: 0.9rem;
-}
-
-/* Online Form (Right) */
-.form-online {
-    flex: 0.7;
-    padding: 1rem;
-    background-color: #f4f4f4;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    text-align: center;
-}
-
-.form-online h3 {
-    color: #4b0082;
-    margin-bottom: 1rem;
-}
-
-.login-btns {
+/* Form Section */
+.form-section {
     display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+    justify-content: center;
+    align-items: center;
+    padding: 3rem;
+    background-color: white;
+    min-height: 100vh;
 }
 
-.btn-social {
-    padding: 0.75rem;
+.form-wrapper {
+    max-width: 600px;
+    width: 100%;
+    padding: 2rem;
+}
+
+.header h1 {
+    color: var(--dark-color);
+    margin-bottom: 0.5rem;
+}
+
+.header p {
+    color: #6c757d;
+}
+
+/* Form Elements */
+.form-floating {
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.form-floating label {
+    color: #6c757d;
+}
+
+.form-control {
+    height: 56px;
+    border-radius: var(--border-radius);
+    border: 1px solid #e0e0e0;
+    padding: 0 16px;
     font-size: 1rem;
-    border: none;
-    border-radius: 5px;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
+}
+
+.password-toggle {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
     cursor: pointer;
+    color: #6c757d;
+    z-index: 10;
+}
+
+.password-toggle:hover {
+    color: var(--primary-color);
+}
+
+/* Password Strength */
+.password-strength {
+    margin-top: -10px;
+    margin-bottom: 15px;
+}
+
+.progress {
+    border-radius: 4px;
+}
+
+.progress-bar {
+    transition: width 0.3s ease;
+}
+
+/* Social Section */
+.social-section {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
     color: white;
-    background-color: #4b0082;
-    transition: background-color 0.3s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 3rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.social-section::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+}
+
+.social-wrapper {
+    max-width: 500px;
+    width: 100%;
+    z-index: 1;
+}
+
+.brand-logo {
+    display: flex;
+    align-items: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+}
+
+.brand-logo i {
+    margin-right: 10px;
+    font-size: 2rem;
+}
+
+/* Social Buttons */
+.btn-social {
+    border-radius: var(--border-radius);
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    border: none;
+    color: white;
+}
+
+.btn-social i {
+    margin-right: 8px;
+    font-size: 1.2rem;
+}
+
+.btn-google {
+    background-color: var(--google-red);
+}
+
+.btn-facebook {
+    background-color: var(--facebook-blue);
+}
+
+.btn-github {
+    background-color: var(--github-black);
 }
 
 .btn-social:hover {
-    background-color: #6a0dad;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Features List */
+.features {
+    margin-top: 3rem;
+}
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+.feature-item i {
+    margin-right: 12px;
+    font-size: 1.3rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Submit Button */
+.btn-primary {
+    background-color: var(--primary-color);
+    border: none;
+    border-radius: var(--border-radius);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(67, 97, 238, 0.3);
+}
+
+/* Terms Checkbox */
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 992px) {
+    .form-section, .social-section {
+        min-height: auto;
+    }
+    
+    .social-section {
+        padding: 3rem 2rem;
+    }
+    
+    .social-auth {
+        margin-top: 2rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .registration-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+    
+    .form-wrapper {
+        padding: 1rem;
+    }
+    
+    .btn-social {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
 }

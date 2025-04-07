@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Forgot Password</title>
+</head>
+<body>
+    <h2>Forgot Password</h2>
+    <form method="POST" action="/forgot_password">
+        {{ form.csrf_token }}
+        
+        <label for="email">Enter your email:</label><br>
+        {{ form.email(size=32) }}<br><br>
+
+        {{ form.submit() }}
+    </form>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}
+          <p>{{ message }}</p>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+</body>
+</html>

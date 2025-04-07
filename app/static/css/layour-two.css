@@ -1,191 +1,114 @@
+/* Base Styles */
 body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Navbar Customization */
+.navbar {
+    padding: 0.5rem 1rem;
+}
+
+.navbar-brand {
+    font-weight: 600;
+}
+
+.navbar-brand img {
+    transition: transform 0.3s ease;
+}
+
+.navbar-brand:hover img {
+    transform: rotate(15deg);
+}
+
+.nav-link {
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    transition: all 0.2s ease;
+}
+
+.nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Profile Dropdown */
+.dropdown-menu {
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.dropdown-item {
+    padding: 0.5rem 1rem;
+    transition: all 0.2s ease;
+}
+
+.dropdown-item:hover {
     background-color: #f8f9fa;
 }
 
-header {
-    background-color: #343a40;
-    color: white;
-    padding: 1rem 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: relative;
+/* Main Content */
+.container-fluid {
+    padding: 0 2rem;
 }
 
-header h2 {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+@media (max-width: 768px) {
+    .container-fluid {
+        padding: 0 1rem;
+    }
 }
 
-header img {
-    height: 50px;
+/* Footer */
+footer {
+    box-shadow: 0 -0.125rem 0.25rem rgba(0, 0, 0, 0.075);
 }
 
-.profile-section {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-right: 70px;
-}
-
-nav {
-    background-color: blue; /* Dark background for the nav */
-    color: white; /* White text for contrast */
-    padding: 1rem; /* Add some padding for better spacing */
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Add a subtle shadow for depth */
-}
-
-nav div {
-    display: flex;
-    justify-content: center; /* Center the content */
-}
-
-nav ul {
-    list-style: none; 
-    display: flex; 
-    gap: 1.5rem; 
-    padding: 0;
-    margin: 0;
-}
-
-nav ul li {
-    cursor: pointer; 
-    font-weight: bold;
-    font-size: 1.1rem; 
-    transition: color 0.3s; 
-}
-
-nav ul li a {
-    color: white;
-    font-weight: bold;
+footer a {
     text-decoration: none;
+    transition: color 0.2s ease;
 }
 
-nav ul li:hover {
-    color: #ffc107; 
+footer a:hover {
+    color: #adb5bd !important;
 }
 
-.profile-section img {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid #ced4da;
-    cursor: pointer;
-    align-items: flex-end;
+/* Modal Customization */
+.modal-content {
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
 }
 
-.profile-section input[type="file"] {
-    display: none;
+/* Alert Customization */
+.alert {
+    border: none;
 }
 
-.menu-icon {
-    cursor: pointer;
-    font-size: 24px;
+/* Animation for logo */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
 }
 
-/* Dropdown Menu Position - Beside the Menu Icon */
-.dropdown-menu {
-    display: none;
-    position: absolute;
-    top: 100%;  /* Position below the menu icon */
-    right: 0;
-    background-color: white;
-    border: 1px solid #ced4da;
+.navbar-brand img {
+    animation: pulse 2s infinite;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
     border-radius: 4px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    list-style: none;
-    padding: 0.5rem 1rem;
-    z-index: 1000;
-    width: 250px;
 }
 
-.dropdown-menu li {
-    margin: 0.5rem 0;
-    cursor: pointer;
-    color: #343a40;
-}
-
-.dropdown-menu li:hover {
-    color: #495057;
-    text-decoration: underline;
-}
-
-.dropdown-menu.show {
-    display: block;
-}
-
-@media (max-width: 768px) {
-    header {
-        flex-direction: column;
-        text-align: center;
-    }
-
-    .profile-section {
-        flex-direction: column;
-        align-items: center;
-        margin-right: 0;
-    }
-}
-
-/* 
-data entry */
-
-/* File Upload Container */
-.file-upload {
-    display: flex;
-    justify-content: center; /* Center content horizontally */
-    align-items: center; /* Center content vertically */
-    flex-direction: column; /* Stack content vertically */
-    background-color: #ffffff; /* White background */
-    border: 2px dashed #ced4da; /* Dashed border for file upload box */
-    border-radius: 10px; /* Rounded corners */
-    width: 60%; /* Restrict width to 60% of the parent */
-    max-width: 600px; /* Maximum width for large screens */
-    min-height: 250px; /* Minimum height for the upload section */
-    padding: 1rem; /* Add padding inside the box */
-    transition: background-color 0.3s ease, border-color 0.3s ease; /* Smooth transitions */
-}
-
-/* Hover Effect */
-.file-upload:hover {
-    background-color: #f1f5f9; /* Slightly darker background on hover */
-    border-color: #007bff; /* Blue border on hover */
-}
-
-/* File Input */
-.file-upload input[type="file"] {
-    font-size: 1.2rem; /* Larger font for visibility */
-    cursor: pointer; /* Pointer cursor to indicate interactivity */
-    color: #495057; /* Neutral text color */
-    background-color: #ffffff; /* White background */
-    padding: 0.8rem; /* Padding around the input */
-    border: 1px solid #ced4da; /* Subtle border for the input */
-    border-radius: 5px; /* Rounded corners for the input */
-    outline: none; /* Remove default outline */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Slight shadow for depth */
-    transition: border-color 0.3s ease, box-shadow 0.3s ease; /* Smooth transitions */
-}
-
-/* Focus Effect for Input */
-.file-upload input[type="file"]:focus {
-    border-color: #007bff; /* Highlight border on focus */
-    box-shadow: 0 0 8px rgba(0, 123, 255, 0.3); /* Blue glow effect on focus */
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .file-upload {
-        width: 90%; /* Increase width for smaller screens */
-        min-height: 200px; /* Adjust height for mobile */
-    }
-
-    .file-upload input[type="file"] {
-        font-size: 1rem; /* Adjust font size for smaller screens */
-        padding: 0.6rem; /* Adjust padding */
-    }
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
 }

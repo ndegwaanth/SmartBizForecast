@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reset Password</title>
+</head>
+<body>
+    <h2>Reset Your Password</h2>
+
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+
+        <label for="password">New Password:</label><br>
+        {{ form.password(size=32) }}<br><br>
+
+        <label for="confirm_password">Confirm Password:</label><br>
+        {{ form.confirm_password(size=32) }}<br><br>
+
+        {{ form.submit() }}
+    </form>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}
+          <p>{{ message }}</p>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+</body>
+</html>

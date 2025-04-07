@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, flash
 from dotenv import load_dotenv
 from flask_bcrypt import Bcrypt
 import secrets
@@ -9,6 +9,9 @@ from pymongo import MongoClient
 from flask_session import Session
 from datetime import timedelta
 from .models import User
+from flask_mail import Mail
+from itsdangerous import URLSafeTimedSerializer
+from flask_cors import CORS
 
 # Load environment variables
 load_dotenv()
@@ -18,6 +21,9 @@ app = Flask(__name__, template_folder="templates")
 
 # Essential configuration
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(32))
+s = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+
+CORS(app)
 
 # Flask-Session configuration
 app.config.update({
@@ -34,6 +40,8 @@ app.config.update({
     'PERMANENT_SESSION_LIFETIME': timedelta(days=7)
 })
 
+mail = Mail(app)
+
 
 # Initialize extensions in correct order
 csrf = CSRFProtect(app)
@@ -46,6 +54,19 @@ db = client['Users']
 collection = db['users-info']
 
 bcrypt = Bcrypt(app)
+
+
+
+
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+
+s = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+
+
 
 # Flask-Login configuration
 login_manager = LoginManager(app)

@@ -91,6 +91,19 @@
                 <div class="card-body">
                     <form id="modelForm" action="{{ url_for('main.model_training') }}" method="POST" class="needs-validation" novalidate>
                         {{ form.hidden_tag() }}
+                            <!-- error display section -->
+                            {% if form.errors %}
+                            <div class="alert alert-danger">
+                                <h5 class="alert-heading">Form Errors</h5>
+                                <ul class="mb-0">
+                                {% for field, errors in form.errors.items() %}
+                                    {% for error in errors %}
+                                        <li>{{ form[field].label.text }}: {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
 
                         <!-- Target Variable Selection -->
                         <div class="row mb-4">

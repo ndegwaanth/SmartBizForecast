@@ -19,6 +19,10 @@
     {% endblock %}
 </head>
 <body class="d-flex flex-column min-vh-100">
+    <!-- Add this near the top of your body content -->
+    <div id="flash-messages" class="position-fixed top-0 end-0 p-3" style="z-index: 1100; width: 350px;">
+        <!-- Flash messages will appear here -->
+    </div>
     <!-- Top Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
         <div class="container-fluid">
@@ -46,6 +50,11 @@
                     <li class="nav-item">
                         <a class="nav-link" href="/streamlit" target="_blank">
                             <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.logout') }}">
+                            <i class="fas fa-chart-line me-1"></i> logout
                         </a>
                     </li>
                 </ul>

@@ -31,6 +31,8 @@ from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired
 from werkzeug.security import generate_password_hash
 from . import s
+from flask_wtf.csrf import CSRFProtect, generate_csrf
+
 
 mail = Mail()
 
@@ -66,55 +68,60 @@ def logout():
 def register():
     from . import collection
     form = Registration()
-    if form.validate_on_submit() and request.method == 'POST':
-        # Collect form data
-        firstname = form.firstname.data
-        lastname = form.lastname.data
-        username_reg = form.username.data
-        email_reg = form.email.data
-        password_reg = form.password.data
-        confirm_password = form.confirm_password.data
-
-        # Check if passwords match
-        if password_reg != confirm_password:
-            return render_template("register.html", form=form, error="Passwords do not match")
-
-        # Hash the password
-        password_hash = bcrypt.generate_password_hash(password_reg).decode('utf-8')
-
+    
+    if form.validate_on_submit():
         try:
-            # Check if the email or username already exists
-            if collection.find_one({"Email": email_reg}) or collection.find_one({"Username": username_reg}):
-                return render_template("register.html", form=form, error="Email or username already taken")
+            # Collect form data
+            firstname = form.firstname.data.strip()
+            lastname = form.lastname.data.strip()
+            username_reg = form.username.data.strip()
+            email_reg = form.email.data.lower().strip()
+            password_reg = form.password.data
 
-            # Insert the new user into MongoDB
+            # Check if user already exists
+            existing_user = collection.find_one({
+                "$or": [
+                    {"Email": email_reg},
+                    {"Username": username_reg}
+                ]
+            })
+            
+            if existing_user:
+                flash("Email or username already taken", "danger")
+                return render_template("register.html", form=form)
+
+            # Hash password
+            password_hash = bcrypt.generate_password_hash(password_reg).decode('utf-8')
+
+            # Create new user
             user_data = {
                 "FirstName": firstname,
                 "LastName": lastname,
                 "Username": username_reg,
                 "Email": email_reg,
-                "Password": password_hash
+                "Password": password_hash,
+                "created_at": datetime.utcnow()
             }
-            collection.insert_one(user_data)
-
-            print("Connection Successful")
-
-            # Automatically log in the user after registration
-            user_dict = collection.find_one({"Email": email_reg})
+            
+            # Insert user
+            result = collection.insert_one(user_data)
+            
+            # Log in the new user
+            user_dict = collection.find_one({"_id": result.inserted_id})
             user = User(user_dict)
             login_user(user)
 
-            flash(f"Welcome, {current_user.username}!", "success")
+            flash(f"Welcome, {user.username}!", "success")
             return redirect(url_for("main.homepage"))
+
         except Exception as e:
-            return render_template("register.html", form=form, error="Database error: " + str(e))
-    print("Connection failled")
+            flash(f"Registration error: {str(e)}", "danger")
+            print(f"Registration error {str(e)}")
+            return render_template("register.html", form=form)
+
+    # For GET requests or failed validation
+    print("failled validating the form")
     return render_template("register.html", form=form)
-
-
-# @main_bp.route('/login', methods=['POST', 'GET'])
-# def login():
-# from . import collection
 
 
 @main_bp.route('/login', methods=['POST', 'GET'])
@@ -231,6 +238,148 @@ The Support Team
     
     return render_template('forgot_pass.html', form=form)
 
+@main_bp.route('/model/prediction/results/', methods=['GET', 'POST'])
+def model_training():
+    # Debug session state at start
+    print(f"\n[SESSION DEBUG] Session ID: {session.sid}")
+    print(f"[SESSION DEBUG] CSRF Token: {session.get('_csrf_token')}")
+    print(f"[SESSION DEBUG] Session keys: {list(session.keys())}")
+
+    # Get columns from session or default to empty list
+    columns = session.get('columns', [])
+    
+    # Initialize form with columns
+    form = DynamicForm(columns=columns)
+    
+    # Handle POST request
+    if request.method == 'POST':
+        print(f"\n[FORM SUBMISSION] Form data: {request.form}")
+        print(f"[FORM SUBMISSION] Form CSRF token: {request.form.get('csrf_token')}")
+        print(f"[FORM SUBMISSION] Session CSRF token: {session.get('_csrf_token')}")
+        
+        # If form validation fails due to CSRF, regenerate token
+        if not form.validate():
+            if 'csrf_token' in form.errors:
+                print("CSRF validation failed - regenerating token")
+                session['_csrf_token'] = generate_csrf()
+                session.modified = True
+                flash("Your session expired. Please try again.", "warning")
+                return redirect(url_for('main.model_training'))
+            
+            print("Form validation errors:", form.errors)
+            # Display specific error messages for each field
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(f"{getattr(form, field).label.text}: {error}", "danger")
+            return render_template('prediction.html',
+                                form=form,
+                                headers=columns,
+                                rows=session.get('dataset_preview', []))
+        
+        # Process valid form submission
+        if form.validate_on_submit():
+            try:
+                # Get form data with validation
+                target_variable = form.target_variable.data
+                predictor_variables = form.predictor_variables.data
+                
+                # Additional validation: target shouldn't be in predictors
+                if target_variable in predictor_variables:
+                    flash("Target variable cannot be one of the predictors", "danger")
+                    return render_template('prediction.html',
+                                        form=form,
+                                        headers=columns,
+                                        rows=session.get('dataset_preview', []))
+                
+                model_select = form.model_preferences.data
+                test_size = form.test_size.data  # Already validated by form
+                random_state = form.random_state.data  # Already validated by form
+
+                # Verify dataset exists
+                uploaded_file = session.get('uploaded_file')
+                if not uploaded_file:
+                    flash("No dataset found. Please upload a dataset first.", "warning")
+                    return redirect(url_for('main.upload_data'))
+
+                # Load dataset with error handling
+                file_path = os.path.join(UPLOAD_FOLDER, uploaded_file)
+                try:
+                    if uploaded_file.endswith('.csv'):
+                        df = pd.read_csv(file_path)
+                    elif uploaded_file.endswith('.xlsx'):
+                        df = pd.read_excel(file_path)
+                    else:
+                        flash("Unsupported file format.", "error")
+                        return redirect(url_for('main.upload_data'))
+                except Exception as e:
+                    flash(f"Error loading dataset: {str(e)}", "error")
+                    return redirect(url_for('main.upload_data'))
+
+                # Validate selected columns exist in dataset
+                missing_columns = [col for col in predictor_variables if col not in df.columns]
+                if target_variable not in df.columns or missing_columns:
+                    flash(f"Invalid columns: {missing_columns} missing from dataset.", "danger")
+                    return redirect(url_for('main.upload_data'))
+
+                # Model training logic
+                if model_select == 'logistic_regression':
+                    try:
+                        metrics = churn.train_initial_model(df, target_variable, test_size, random_state)
+                        X, y = churn.preprocess_data(df, target_variable)
+                        X = churn.scaler.transform(X)
+                        y_pred = churn.model.predict(X)
+                        graphs = churn.generate_visualizations(df, target_variable, y_pred, predictor_variables)
+                        
+                        flash("Logistic Regression model trained successfully!", "success")
+                        return render_template('churnpred.html', 
+                                            metrics=metrics, 
+                                            graphs=graphs, 
+                                            form=form)
+                    except Exception as e:
+                        flash(f"Error during Logistic Regression training: {str(e)}", "error")
+                        return redirect(url_for('main.model_training'))
+                
+                elif model_select == 'ARIMA':
+                    try:
+                        df[target_variable] = pd.to_numeric(df[target_variable], errors='coerce')
+                        df.dropna(subset=[target_variable], inplace=True)
+
+                        model = sales.train_initial_model(df, target_variable, test_size, random_state)
+                        forecast = model.forecast(steps=len(df))
+
+                        metrics = {
+                            "RMSE": np.sqrt(mean_squared_error(df[target_variable].iloc[-len(forecast):], forecast)),
+                            "AIC": model.aic,
+                            "BIC": model.bic
+                        }
+
+                        model_summary = model.summary().as_text()
+                        graphs = sales.generate_visualizations(df, target_variable, forecast)
+                        
+                        flash("ARIMA model trained successfully!", "success")
+                        return render_template('sales.html', 
+                                            metrics=metrics, 
+                                            graphs=graphs, 
+                                            form=form,
+                                            model_summary=model_summary)
+                    except Exception as e:
+                        flash(f"Error during ARIMA training: {str(e)}", "error")
+                        return redirect(url_for('main.model_training'))
+                
+                else:
+                    flash('Selected model type not implemented yet', 'warning')
+                    return redirect(url_for('main.model_training'))
+
+            except Exception as e:
+                flash(f"Unexpected error during model training: {str(e)}", "error")
+                return redirect(url_for('main.model_training'))
+    
+    # For GET requests
+    return render_template('prediction.html', 
+                         form=form, 
+                         headers=columns, 
+                         rows=session.get('dataset_preview', []))
+
 @main_bp.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
     from . import collection
@@ -301,65 +450,66 @@ if not os.path.exists(UPLOAD_FOLDER):
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# @main_bp.route('/upload', methods=['POST', 'GET'])
-# @login_required
-# def upload_data():
-#     if request.method == 'POST':
-#         file = request.files.get('file')
+@main_bp.route('/upload', methods=['POST', 'GET'])
+@login_required
+def upload_data():
+    if request.method == 'POST':
+        file = request.files.get('file')
 
-#         # Check if a file is selected
-#         if not file:
-#             flash("No file was uploaded.", "error")
-#             print("DEBUG: No file received in request")
-#             return redirect(url_for('main.upload_data'))
+        # Check if a file is selected
+        if not file:
+            flash("No file was uploaded.", "error")
+            print("DEBUG: No file received in request")
+            return redirect(url_for('main.upload_data'))
 
-#         # Check if the file is empty or has an invalid format
-#         if file.filename == '':
-#             flash("No selected file.", "error")
-#             print("DEBUG: Empty filename")
-#             return redirect(url_for('main.upload_data'))
+        # Check if the file is empty or has an invalid format
+        if file.filename == '':
+            flash("No selected file.", "error")
+            print("DEBUG: Empty filename")
+            return redirect(url_for('main.upload_data'))
 
-#         if not allowed_file(file.filename):
-#             flash("Invalid file format. Please upload a .csv or .xlsx file.", "error")
-#             print(f"DEBUG: Invalid file type -> {file.filename}")
-#             return redirect(url_for('main.upload_data'))
+        if not allowed_file(file.filename):
+            flash("Invalid file format. Please upload a .csv or .xlsx file.", "error")
+            print(f"DEBUG: Invalid file type -> {file.filename}")
+            return redirect(url_for('main.upload_data'))
 
-#         # Save file with a unique name
-#         filename = secure_filename(file.filename)
-#         unique_filename = f"{uuid.uuid4()}_{filename}"
-#         file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
-#         file.save(file_path)
+        # Save file with a unique name
+        filename = secure_filename(file.filename)
+        unique_filename = f"{uuid.uuid4()}_{filename}"
+        file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+        file.save(file_path)
 
-#         try:
-#             # Read the dataset (Only first 10 rows to avoid session overload)
-#             if filename.lower().endswith('.csv'):
-#                 df = pd.read_csv(file_path, nrows=10)
-#             elif filename.lower().endswith('.xlsx'):
-#                 df = pd.read_excel(file_path, nrows=10)
-#             else:
-#                 flash("Unsupported file format.", "error")
-#                 print("DEBUG: File format not supported")
-#                 return redirect(url_for('main.upload_data'))
+        try:
+            # Read the dataset (Only first 10 rows to avoid session overload)
+            if filename.lower().endswith('.csv'):
+                df = pd.read_csv(file_path, nrows=10)
+            elif filename.lower().endswith('.xlsx'):
+                df = pd.read_excel(file_path, nrows=10)
+            else:
+                flash("Unsupported file format.", "error")
+                print("DEBUG: File format not supported")
+                return redirect(url_for('main.upload_data'))
 
-#             print("DEBUG: File uploaded successfully:", file_path)
-#             print("DEBUG: Data preview:\n", df.head())
+            print("DEBUG: File uploaded successfully:", file_path)
+            print("DEBUG: Data preview:\n", df.head())
 
-#             # Store only column names in session, not the full dataset
-#             session['columns'] = df.columns.tolist()
-#             session['uploaded_file'] = unique_filename
-#             session['dataset_preview'] = df.head(5).to_json()  # Store a preview, not full data
+            # Store only column names in session, not the full dataset
+            session['columns'] = df.columns.tolist()
+            session['uploaded_file'] = unique_filename
+            session['dataset_preview'] = df.head(5).to_json()
+            session.modified = True
 
-#             # Generate dynamic form
-#             form = DynamicForm(columns=df.columns.tolist())
+            # Generate dynamic form
+            form = DynamicForm(columns=df.columns.tolist())
 
-#             return render_template('prediction.html', headers=df.columns.tolist(), rows=df.values.tolist(), form=form)
+            return render_template('prediction.html', headers=df.columns.tolist(), rows=df.values.tolist(), form=form)
 
-#         except Exception as e:
-#             flash(f"Error processing file: {str(e)}", "error")
-#             print("DEBUG: Exception ->", str(e))
-#             return redirect(url_for('main.upload_data'))
+        except Exception as e:
+            flash(f"Error processing file: {str(e)}", "error")
+            print("DEBUG: Exception ->", str(e))
+            return redirect(url_for('main.upload_data'))
 
-#     return render_template('homepage.html')
+    return render_template('homepage.html')
 
 
 
@@ -402,115 +552,6 @@ from .predictions import SalesPrediction
 churn = ChurnPrediction()
 sales = SalesPrediction()
 
-@main_bp.route('/model/prediction/results/', methods=['GET', 'POST'])
-def model_training():
-    columns = session.get('columns', [])  # Retrieve column names from session
-    form = DynamicForm(columns=columns)
-    metrics = None
-    graphs = []  # Initialize empty graph list
-    model_summary = None
-
-    if request.method == 'POST' and form.validate_on_submit():
-        target_variable = form.target_variable.data
-        predictor_variables = form.predictor_variables.data
-        model_select = form.model_preferences.data
-        test_size = float(form.test_size.data or 0.2)  # Default 20% test size
-        random_state = int(form.random_state.data or 42)  # Default seed
-
-        print(session.get('uploaded_file'))
-        # Ensure dataset exists
-        uploaded_file = session.get('uploaded_file')
-        if not uploaded_file:
-            flash("No dataset found. Please upload a dataset first.", "warning")
-            print("No dataset found")
-            return redirect(url_for('main.upload_data'))
-
-        file_path = os.path.join(UPLOAD_FOLDER, uploaded_file)
-
-        # Reload dataset from disk
-        try:
-            if uploaded_file.endswith('.csv'):
-                df = pd.read_csv(file_path)
-            elif uploaded_file.endswith('.xlsx'):
-                df = pd.read_excel(file_path)
-            else:
-                flash("Unsupported file format.", "error")
-                print("Unsuported formatof the dataset")
-                return redirect(url_for('main.upload_data'))
-        except Exception as e:
-            flash(f"Error loading dataset: {str(e)}", "error")
-            print("Error in the dataset")
-            return redirect(url_for('main.upload_data'))
-
-        # Validate selected columns
-        missing_columns = [col for col in predictor_variables if col not in df.columns]
-        if target_variable not in df.columns or missing_columns:
-            flash(f"Invalid columns: {missing_columns} missing.", "danger")
-            print("Invalid data columns")
-            return redirect(url_for('main.upload_data'))
-
-        if model_select == 'logistic_regression':
-            try:
-                metrics = churn.train_initial_model(df, target_variable, test_size, random_state)
-                X, y = churn.preprocess_data(df, target_variable)
-                X = churn.scaler.transform(X)
-                y_pred = churn.model.predict(X)
-                graphs = churn.generate_visualizations(df, target_variable, y_pred, predictor_variables)
-                
-                # Debug prints to check what's being returned
-                print("Metrics:", metrics)
-                print("Graphs:", graphs)
-                
-                flash("Model training and visualization completed successfully.", "success")
-                return render_template('churnpred.html', 
-                                    metrics=metrics, 
-                                    graphs=graphs, 
-                                    form=form)
-            except Exception as e:
-                flash(f"Error during model training: {str(e)}", "error")
-                return redirect(url_for('main.model_training', model_select=model_select))
-        elif model_select == 'ARIMA':
-            try:
-                df[target_variable] = pd.to_numeric(df[target_variable], errors='coerce')
-                df.dropna(subset=[target_variable], inplace=True)
-
-                model = sales.train_initial_model(df, target_variable, test_size, random_state)
-                flash("ARIMA model training completed successfully.", "success")
-
-                # Get ARIMA predictions
-                forecast = model.forecast(steps=len(df))
-
-                # Evaluate model performance
-                rmse = np.sqrt(mean_squared_error(df[target_variable].iloc[-len(forecast):], forecast))
-                aic = model.aic
-                bic = model.bic
-
-                metrics = {
-                    "RMSE": rmse,
-                    "AIC": aic,
-                    "BIC": bic
-                }
-
-                # Get model summary
-                model_summary = model.summary().as_text()
-                flash(f"Model Metrics - RMSE: {rmse:.4f}, AIC: {aic:.4f}, BIC: {bic:.4f}", "info")
-
-                # Generate graphs
-                graphs = sales.generate_visualizations(df, target_variable, forecast)
-                flash("Graphs generated successfully.", "success")
-
-            except Exception as e:
-                flash(f"Error during ARIMA model training: {str(e)}", "error")
-                return redirect(url_for('main.model_training'))
-
-            return render_template('sales.html', metrics=metrics, graphs=graphs, form=form, model_summary=model_summary, model_select=model_select)
-
-        else:
-            flash('The selected model has not been implemented yet.', 'warning')
-            return redirect(url_for('main.model_training'))
-    
-    # Add this return statement for GET requests
-    return render_template('prediction.html', form=form, headers=columns, rows=[])
 
 
 @main_bp.route('/predict_churn', methods=['POST'])
@@ -560,8 +601,8 @@ from bson import ObjectId
 import json
 from datetime import datetime
 
-@main_bp.route('/api/recent_files')
-@login_required
+
+
 def recent_files():
     from . import collection
 
@@ -727,62 +768,62 @@ def data_preview():
         }), 500
 
 # Modify your existing upload_data route to track files
-@main_bp.route('/upload', methods=['POST', 'GET'])
-@login_required
-def upload_data():
-    from . import collection
-    if request.method == 'POST':
-        file = request.files.get('file')
+# @main_bp.route('/upload', methods=['POST', 'GET'])
+# @login_required
+# def upload_data():
+#     from . import collection
+#     if request.method == 'POST':
+#         file = request.files.get('file')
 
-        if not file:
-            flash("No file was uploaded.", "error")
-            return redirect(url_for('main.upload_data'))
+#         if not file:
+#             flash("No file was uploaded.", "error")
+#             return redirect(url_for('main.upload_data'))
 
-        if file.filename == '':
-            flash("No selected file.", "error")
-            return redirect(url_for('main.upload_data'))
+#         if file.filename == '':
+#             flash("No selected file.", "error")
+#             return redirect(url_for('main.upload_data'))
 
-        if not allowed_file(file.filename):
-            flash("Invalid file format. Please upload a .csv or .xlsx file.", "error")
-            return redirect(url_for('main.upload_data'))
+#         if not allowed_file(file.filename):
+#             flash("Invalid file format. Please upload a .csv or .xlsx file.", "error")
+#             return redirect(url_for('main.upload_data'))
 
-        # Save file with unique name
-        filename = secure_filename(file.filename)
-        unique_filename = f"{uuid.uuid4()}_{filename}"
-        file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
-        file.save(file_path)
+#         # Save file with unique name
+#         filename = secure_filename(file.filename)
+#         unique_filename = f"{uuid.uuid4()}_{filename}"
+#         file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+#         file.save(file_path)
 
-        try:
-            # Read the dataset (first 10 rows)
-            if filename.lower().endswith('.csv'):
-                df = pd.read_csv(file_path, nrows=10)
-            else:
-                df = pd.read_excel(file_path, nrows=10)
+#         try:
+#             # Read the dataset (first 10 rows)
+#             if filename.lower().endswith('.csv'):
+#                 df = pd.read_csv(file_path, nrows=10)
+#             else:
+#                 df = pd.read_excel(file_path, nrows=10)
 
-            # Store file info in database
-            file_data = {
-                "user_id": ObjectId(session['user_id']),
-                "filename": filename,
-                "stored_filename": unique_filename,
-                "upload_date": datetime.utcnow(),
-                "size": os.path.getsize(file_path),
-                "columns": df.columns.tolist()
-            }
-            collection.insert_one(file_data)
+#             # Store file info in database
+#             file_data = {
+#                 "user_id": ObjectId(session['user_id']),
+#                 "filename": filename,
+#                 "stored_filename": unique_filename,
+#                 "upload_date": datetime.utcnow(),
+#                 "size": os.path.getsize(file_path),
+#                 "columns": df.columns.tolist()
+#             }
+#             collection.insert_one(file_data)
 
-            # Update session
-            session['columns'] = df.columns.tolist()
-            session['uploaded_file'] = unique_filename
-            session['dataset_preview'] = df.head(5).to_json()
+#             # Update session
+#             session['columns'] = df.columns.tolist()
+#             session['uploaded_file'] = unique_filename
+#             session['dataset_preview'] = df.head(5).to_json()
 
-            flash("File uploaded successfully!", "success")
-            return redirect(url_for('main.homepage'))
+#             flash("File uploaded successfully!", "success")
+#             return redirect(url_for('main.homepage'))
 
-        except Exception as e:
-            flash(f"Error processing file: {str(e)}", "error")
-            return redirect(url_for('main.upload_data'))
+#         except Exception as e:
+#             flash(f"Error processing file: {str(e)}", "error")
+#             return redirect(url_for('main.upload_data'))
 
-    return render_template('homepage.html')
+#     return render_template('homepage.html')
 
 
 @main_bp.route('/api/column_stats/<column_name>')

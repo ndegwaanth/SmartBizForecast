@@ -6,6 +6,13 @@
     <title>{% block title %}My Website{% endblock %}</title>
     <link rel="stylesheet" href="../static/css/layout.css">
     <link rel="icon" href="../static/images/logo.png" type="image/png">
+
+<script>
+// Prevent wallet extensions from interfering
+if (typeof window.ethereum !== 'undefined') {
+    window.ethereum.autoRefreshOnNetworkChange = false;
+}
+</script>
 </head>
 <body>
     <!-- Header -->

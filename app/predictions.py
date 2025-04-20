@@ -19,6 +19,7 @@ from statsmodels.tsa.arima.model import ARIMA
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.tsa.seasonal import seasonal_decompose
+from pmdarima import auto_arima
 
 class ChurnPrediction:
     def __init__(self):
@@ -332,49 +333,106 @@ class SalesPrediction:
 
     def train_initial_model(self, df, target_column, test_size=0.2, random_state=42):
         """Train ARIMA model on sales data after ensuring stationarity and evaluate it."""
+        # Create a copy to avoid modifying original dataframe
+        df = df.copy()
+        
+        # Convert and clean target
         df[target_column] = pd.to_numeric(df[target_column], errors='coerce')
         df.dropna(subset=[target_column], inplace=True)
-
-        # Ensure DateTime index
-        df.index = pd.to_datetime(df.index)
+        
+        # Check for existing datetime index or columns
+        if not isinstance(df.index, pd.DatetimeIndex):
+            # Try to find datetime columns
+            datetime_cols = df.select_dtypes(include=['datetime', 'datetimetz']).columns
+            
+            if len(datetime_cols) == 0:
+                # Try to convert object columns that look like dates
+                for col in df.select_dtypes(include=['object']).columns:
+                    try:
+                        df[col] = pd.to_datetime(df[col])
+                        datetime_cols = [col]
+                        break
+                    except:
+                        continue
+            
+            # Set datetime index if found
+            if len(datetime_cols) > 0:
+                df = df.set_index(datetime_cols[0])
+            else:
+                # Create synthetic datetime index if none found
+                df.index = pd.date_range(start='2000-01-01', periods=len(df), freq='D')
+                print("Warning: No datetime column found - using generated dates")
+        
+        # Validate time-series requirements
+        if len(df) < 20:
+            raise ValueError("Insufficient data points (minimum 20 required) for meaningful time series analysis")
+        
+        # Ensure proper time ordering
         df.sort_index(inplace=True)
-
+        
         # Check stationarity
         def check_stationarity(series):
             result = adfuller(series.dropna())
             return result[1]  # p-value
-
+        
         p_value = check_stationarity(df[target_column])
         if p_value > 0.05:
             df[target_column] = df[target_column].diff().dropna()  # First differencing
-
-        # Train-Test Split
+        
+        # Train-Test Split (preserve temporal order)
         train_size = int(len(df) * (1 - test_size))
         train, test = df[target_column][:train_size], df[target_column][train_size:]
-
-        # Fit ARIMA model
-        self.model = ARIMA(train.dropna(), order=(1,1,1))
-        self.model = self.model.fit()
-        print(self.model.summary())
-
-        # Forecast and Evaluate Model
-        forecast = self.model.forecast(steps=len(test))
-        rmse = np.sqrt(mean_squared_error(test, forecast))
-        mae = mean_absolute_error(test, forecast)
-        r2 = r2_score(test, forecast)
-        aic = self.model.aic
-        bic = self.model.bic
-
-        print(f"Model Evaluation:\nRMSE: {rmse}\nMAE: {mae}\nR2 Score: {r2}\nAIC: {aic}\nBIC: {bic}")
-
-        return {
-            "model": self.model,
-            "rmse": rmse,
-            "mae": mae,
-            "r2": r2,
-            "aic": aic,
-            "bic": bic
-        }
+        
+        # Auto ARIMA model selection
+        try:
+            # Check for seasonality
+            try:
+                decomposition = seasonal_decompose(train.dropna(), model='additive', period=12)
+                seasonal = decomposition.seasonal.std() > 0.1 * decomposition.observed.std()
+            except:
+                seasonal = False  # Default to non-seasonal if decomposition fails
+                
+            # Fit appropriate model
+            if seasonal:
+                self.model = auto_arima(
+                    train.dropna(),
+                    seasonal=True,
+                    m=12,  # Monthly seasonality
+                    suppress_warnings=True,
+                    stepwise=True,
+                    trace=True
+                )
+            else:
+                self.model = auto_arima(
+                    train.dropna(),
+                    seasonal=False,
+                    suppress_warnings=True,
+                    stepwise=True,
+                    trace=True
+                )
+                
+            print(self.model.summary())
+            
+            # Forecast and Evaluate Model
+            forecast = self.model.predict(n_periods=len(test))
+            rmse = np.sqrt(mean_squared_error(test, forecast))
+            mae = mean_absolute_error(test, forecast)
+            r2 = r2_score(test, forecast)
+            aic = self.model.aic()
+            bic = self.model.bic()
+            
+            return {
+                "model": self.model,
+                "rmse": rmse,
+                "mae": mae,
+                "r2": r2,
+                "aic": aic,
+                "bic": bic,
+                "is_seasonal": seasonal
+            }
+            
+        except Exception as e:
+            raise ValueError(f"ARIMA modeling failed: {str(e)}")
     
     def generate_visualizations(self, df, target_column, forecast=None):
         """Generates useful time-series graphs for ARIMA model visualization."""
@@ -466,6 +524,34 @@ class SalesPrediction:
         plt.ylabel("Sales")
         plt.grid(True)
         graph_images.append(plot_to_base64())
+
+        if hasattr(self.model, 'seasonal_order') and any(self.model.seasonal_order):
+            try:
+                # Seasonal decomposition with model's seasonal period
+                m = self.model.seasonal_order[-1]
+                decomposition = seasonal_decompose(df[target_column], model='additive', period=m)
+                
+                plt.figure(figsize=(10, 7))
+                plt.subplot(4, 1, 1)
+                plt.plot(decomposition.observed)
+                plt.title('Observed')
+                
+                plt.subplot(4, 1, 2)
+                plt.plot(decomposition.trend)
+                plt.title('Trend')
+                
+                plt.subplot(4, 1, 3)
+                plt.plot(decomposition.seasonal)
+                plt.title('Seasonal')
+                
+                plt.subplot(4, 1, 4)
+                plt.plot(decomposition.resid)
+                plt.title('Residual')
+                
+                plt.tight_layout()
+                graph_images.append(plot_to_base64())
+            except:
+                pass
 
         return graph_images[:10]
 

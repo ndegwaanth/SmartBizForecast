@@ -1,19 +1,22 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, EmailField, PasswordField, SubmitField, SelectField, SelectMultipleField, FloatField, IntegerField, BooleanField
 from wtforms.validators import EqualTo, DataRequired, Email, Length, DataRequired, Optional, URL
-from wtforms import ValidationError
+from wtforms import ValidationError, validators
 
 class Registration(FlaskForm):
     firstname = StringField('First Name', validators=[DataRequired(), Length(min=2, max=50)])
     lastname = StringField('Last Name', validators=[DataRequired(), Length(min=2, max=50)])
-    username = StringField('Username', validators=[DataRequired(), Length(min=4, max=80)])
-    email = EmailField('Email', validators=[DataRequired(), Email()])
-    password = PasswordField('Password', validators=[DataRequired(), Length(min=8)])
+    username = StringField('Username', validators=[DataRequired(), Length(min=4, max=25)])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Password', validators=[
+        DataRequired(),
+        Length(min=8, message='Password must be at least 8 characters')
+    ])
     confirm_password = PasswordField('Confirm Password', validators=[
         DataRequired(),
         EqualTo('password', message='Passwords must match')
     ])
-    submit = SubmitField('Register')
+    submit = SubmitField('Sign Up')
 
 
 class LoginForm(FlaskForm):
@@ -67,44 +70,48 @@ from wtforms import widgets  # Import widgets
 
 class DynamicForm(FlaskForm):
     target_variable = SelectField('Target Variable', validators=[DataRequired()])
-
-    # Use checkboxes for predictor variables
-    # predictor_variables = SelectMultipleField(
-    #     'Predictor Variables',
-    #     option_widget=widgets.CheckboxInput(),  
-    #     widget=widgets.ListWidget(prefix_label=False), 
-    # )
-
+    
     predictor_variables = SelectMultipleField(
         'Predictor Variables',
-        validators=[DataRequired()],
-        choices=[],  # Will be populated
+        validators=[DataRequired(message="Please select at least one predictor")],
+        choices=[],
         render_kw={'class': 'form-select', 'size': '8'}
     )
-
-    hyperparameter_tuning = BooleanField('Enable Hyperparameter Tuning', default=False, validators=[Optional()])
-    api_link = SelectField('Action for Dataset Uploaded', choices=[
-        ('customer_churn_prediction', 'Customer Churn Prediction'),
-        ('sales_prediction', 'Sales Predictions')
-        ])
-    test_size = FloatField('Test Size (0.1 - 0.9)', default=0.2, validators=[DataRequired()])
+    
+    hyperparameter_tuning = BooleanField('Enable Hyperparameter Tuning', default=False)
+    test_size = FloatField('Test Size', default=0.2, validators=[
+        DataRequired(),
+        validators.NumberRange(min=0.1, max=0.9, message="Must be between 0.1 and 0.9")
+    ])
     random_state = IntegerField('Random State', default=42, validators=[DataRequired()])
     model_preferences = SelectField('Model Preferences', choices=[
         ('linear_regression', 'Linear Regression'),
         ('logistic_regression', 'Logistic Regression'),
         ('ARIMA', 'ARIMA Model'),
     ], validators=[DataRequired()])
+    
     submit = SubmitField('Train Model')
 
     def __init__(self, columns, *args, **kwargs):
         super(DynamicForm, self).__init__(*args, **kwargs)
         self.target_variable.choices = [(col, col) for col in columns]
         self.predictor_variables.choices = [(col, col) for col in columns]
-    
-    def validate_predictor_variables(self, field):
-        if not field.data or len(field.data) == 0:
-            raise ValidationError('Please select at least one predictor variable')
+        # Remove api_link if not needed
+        if hasattr(self, 'api_link'):
+            del self.api_link
 
+    def validate(self, extra_validators=None):
+        # First run default validation
+        initial_validation = super(DynamicForm, self).validate()
+        if not initial_validation:
+            return False
+            
+        # Custom validation
+        if self.target_variable.data in self.predictor_variables.data:
+            self.target_variable.errors.append("Target variable cannot be a predictor")
+            return False
+            
+        return True
 
 class ForgotPasswordForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])

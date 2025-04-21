@@ -20,6 +20,12 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.tsa.seasonal import seasonal_decompose
 from pmdarima import auto_arima
+from statsmodels.tsa.arima.model import ARIMA
+from functools import wraps
+import signal
+import logging
+
+
 
 class ChurnPrediction:
     def __init__(self):
@@ -240,402 +246,184 @@ class ChurnPrediction:
 
         return graph_images[:10]  # Return up to 10 graphs
 
+
 class SalesPrediction:
     def __init__(self):
         self.scaler = StandardScaler()
+        self.model = None
         self.encoders = {}
 
-    def clean_sales_data(self, df, target_column=None):
-        """Automatically cleans any sales dataset without knowing its structure."""    
-        # Drop columns with excessive missing values (> 30%)
-        df = df.dropna(thresh=int(0.7 * df.shape[1]))
-
-        # Handle missing values dynamically
-        for col in df.columns:
-            if df[col].dtype == "object":
-                df[col].fillna(method='bfill', inplace=True) 
-            else:
-                df[col].fillna(df[col].median(), inplace=True)  # Fill numerical with median
-
-        # Remove duplicate rows
-        df = df.drop_duplicates()
-
-        # Detect and convert date columns
-        for col in df.select_dtypes(include=["object"]).columns:
-            try:
-                df[col] = pd.to_datetime(df[col])
-            except:
-                pass
-
-        # Extract features from date columns
-        date_cols = df.select_dtypes(include=["datetime"]).columns
-        for col in date_cols:
-            df[f"{col}_year"] = df[col].dt.year
-            df[f"{col}_month"] = df[col].dt.month
-            df[f"{col}_day"] = df[col].dt.day
-            df[f"{col}_weekday"] = df[col].dt.weekday
-            df.drop(columns=[col], inplace=True)
-
-        # Standardize categorical text (lowercase, remove spaces)
-        for col in df.select_dtypes(include=["object"]).columns:
-            df[col] = df[col].str.lower().str.strip()
-
-        # Encode categorical variables
-        label_encoders = {}
-        for col in df.select_dtypes(include=["object"]).columns:
-            le = LabelEncoder()
-            df[col] = le.fit_transform(df[col])
-            label_encoders[col] = le
-
-        # Handle numerical outliers (IQR Method)
-        numeric_cols = df.select_dtypes(include=np.number).columns
-        for col in numeric_cols:
-            Q1 = df[col].quantile(0.25)
-            Q3 = df[col].quantile(0.75)
-            IQR = Q3 - Q1
-            outliers = df[(df[col] >= Q1 - 1.5 * IQR) & (df[col] <= Q3 + 1.5 * IQR)]
-            df = df[~outliers.any(axis=1)]
-
-        # Normalize numerical data
-        scaler = StandardScaler()
-        df[numeric_cols] = scaler.fit_transform(df[numeric_cols])
-
-        # Balance the dataset
-        if target_column and df[target_column].nunique() == 2:
-            class_counts = df[target_column].value_counts()
-            min_class = class_counts.idxmin()
-            df = df.groupby(target_column, group_keys=False).apply(lambda x: x.sample(class_counts[min_class])).reset_index(drop=True)
-        
-        # Generate interaction features (Feature Crosses)
-        for col1 in numeric_cols:
-            for col2 in numeric_cols:
-                if col1 != col2:
-                    df[f"{col1}_x_{col2}"] = df[col1] * df[col2]
-        
-        # Create lag features for time-series data
-        for col in numeric_cols:
-            df[f"{col}_lag_1"] = df[col].shift(1)  # Previous row value
-            df[f"{col}_lag_7"] = df[col].shift(7)  # Weekly trend
-        
-        # Applying clustering to segment data
-        if len(df) > 5:  # Ensure enough samples for clustering
-            kmeans = KMeans(n_clusters=min(5, len(df)//2))
-            df["cluster_segment"] = kmeans.fit_predict(df[numeric_cols])       
-
-        if target_column and target_column in df.columns:
-            X = df.drop(columns=[target_column])
-            y = df[target_column]
-        else:
-            X = df
-            y = None
-        
-        return X, y
-
-    def train_initial_model(self, df, target_column, test_size=0.2, random_state=42):
-        """Train ARIMA model on sales data after ensuring stationarity and evaluate it."""
-        # Create a copy to avoid modifying original dataframe
+    def prepare_time_series(self, df, target_column):
+        """Prepares any dataset for time series analysis"""
         df = df.copy()
         
-        # Convert and clean target
+        # Ensure target is numeric
         df[target_column] = pd.to_numeric(df[target_column], errors='coerce')
         df.dropna(subset=[target_column], inplace=True)
         
-        # Check for existing datetime index or columns
-        if not isinstance(df.index, pd.DatetimeIndex):
-            # Try to find datetime columns
-            datetime_cols = df.select_dtypes(include=['datetime', 'datetimetz']).columns
-            
-            if len(datetime_cols) == 0:
-                # Try to convert object columns that look like dates
-                for col in df.select_dtypes(include=['object']).columns:
-                    try:
-                        df[col] = pd.to_datetime(df[col])
-                        datetime_cols = [col]
-                        break
-                    except:
-                        continue
-            
-            # Set datetime index if found
-            if len(datetime_cols) > 0:
-                df = df.set_index(datetime_cols[0])
-            else:
-                # Create synthetic datetime index if none found
-                df.index = pd.date_range(start='2000-01-01', periods=len(df), freq='D')
-                print("Warning: No datetime column found - using generated dates")
+        # Check for datetime columns
+        datetime_cols = df.select_dtypes(include=['datetime']).columns
         
-        # Validate time-series requirements
-        if len(df) < 20:
-            raise ValueError("Insufficient data points (minimum 20 required) for meaningful time series analysis")
-        
-        # Ensure proper time ordering
-        df.sort_index(inplace=True)
-        
-        # Check stationarity
-        def check_stationarity(series):
-            result = adfuller(series.dropna())
-            return result[1]  # p-value
-        
-        p_value = check_stationarity(df[target_column])
-        if p_value > 0.05:
-            df[target_column] = df[target_column].diff().dropna()  # First differencing
-        
-        # Train-Test Split (preserve temporal order)
-        train_size = int(len(df) * (1 - test_size))
-        train, test = df[target_column][:train_size], df[target_column][train_size:]
-        
-        # Auto ARIMA model selection
-        try:
-            # Check for seasonality
+        if len(datetime_cols) > 0:
+            # Use the first datetime column as index
+            df = df.set_index(datetime_cols[0]).sort_index()
+            # Ensure proper frequency
             try:
-                decomposition = seasonal_decompose(train.dropna(), model='additive', period=12)
-                seasonal = decomposition.seasonal.std() > 0.1 * decomposition.observed.std()
+                df = df.asfreq(pd.infer_freq(df.index) or 'D')
             except:
-                seasonal = False  # Default to non-seasonal if decomposition fails
-                
-            # Fit appropriate model
-            if seasonal:
-                self.model = auto_arima(
-                    train.dropna(),
-                    seasonal=True,
-                    m=12,  # Monthly seasonality
+                df = df.asfreq('D')
+        else:
+            # Create numeric index if no datetime column exists
+            df.index = pd.RangeIndex(start=0, stop=len(df))
+        
+        return df[[target_column]].dropna()
+
+    def train_initial_model(self, df, target_column, test_size=0.2, random_state=42):
+        """Automated ARIMA modeling for any dataset"""
+        try:
+            # Prepare the time series data
+            ts_data = self.prepare_time_series(df, target_column)
+            
+            # Check for sufficient data
+            if len(ts_data) < 30:
+                raise ValueError("Insufficient data points (minimum 30 required)")
+            
+            # Train-test split (preserve order)
+            train_size = int(len(ts_data) * (1 - test_size))
+            train, test = ts_data.iloc[:train_size], ts_data.iloc[train_size:]
+            
+            # Detect seasonality
+            seasonal = False
+            seasonal_period = 12  # Default monthly seasonality
+            
+            if len(train) > 50:
+                try:
+                    decomposition = seasonal_decompose(train, model='additive', period=seasonal_period)
+                    seasonal = decomposition.seasonal.std() > 0.1 * decomposition.observed.std()
+                except:
+                    seasonal = False
+            
+            # Fit ARIMA model with error handling
+            try:
+                model = auto_arima(
+                    train,
+                    seasonal=seasonal,
+                    m=seasonal_period if seasonal else None,
                     suppress_warnings=True,
                     stepwise=True,
-                    trace=True
-                )
-            else:
-                self.model = auto_arima(
-                    train.dropna(),
-                    seasonal=False,
-                    suppress_warnings=True,
-                    stepwise=True,
-                    trace=True
+                    trace=True,
+                    error_action='ignore',
+                    max_order=5,
+                    maxiter=30,
+                    n_jobs=1,
+                    random_state=random_state
                 )
                 
-            print(self.model.summary())
+                # Generate forecast
+                forecast, conf_int = model.predict(
+                    n_periods=len(test),
+                    return_conf_int=True
+                )
+                
+                # Create forecast index
+                if isinstance(train.index, pd.DatetimeIndex):
+                    last_date = train.index[-1]
+                    freq = pd.infer_freq(train.index) or 'D'
+                    forecast_index = pd.date_range(
+                        start=last_date + pd.Timedelta(days=1),
+                        periods=len(test),
+                        freq=freq
+                    )
+                else:
+                    forecast_index = pd.RangeIndex(
+                        start=train.index[-1] + 1,
+                        stop=train.index[-1] + 1 + len(test)
+                    )
+                
+                # Prepare results
+                results = {
+                    "model": model,
+                    "metrics": {
+                        "rmse": np.sqrt(mean_squared_error(test, forecast)),
+                        "mae": mean_absolute_error(test, forecast),
+                        "r2": r2_score(test, forecast),
+                        "aic": model.aic() if hasattr(model, 'aic') else None,
+                        "bic": model.bic() if hasattr(model, 'bic') else None,
+                        "is_seasonal": seasonal,
+                        "model_order": str(model.order),
+                        "seasonal_order": str(model.seasonal_order) if hasattr(model, 'seasonal_order') else None
+                    },
+                    "forecast": forecast.tolist(),
+                    "conf_int": conf_int.tolist() if conf_int is not None else None,
+                    "summary": model.summary().as_text() if hasattr(model, 'summary') else "No summary available",
+                    "forecast_index": forecast_index.astype(str).tolist()
+                }
+                
+                return results
+                
+            except Exception as e:
+                raise ValueError(f"ARIMA modeling failed: {str(e)}")
+                
+        except Exception as e:
+            raise ValueError(f"Data preparation failed: {str(e)}")
+
+    def generate_visualizations(self, df, target_column, forecast=None, conf_int=None, model=None):
+        """Generates visualization data that works with any dataset"""
+        try:
+            # Prepare the time series data
+            ts_data = self.prepare_time_series(df, target_column)
+            labels = ts_data.index.astype(str).tolist()
             
-            # Forecast and Evaluate Model
-            forecast = self.model.predict(n_periods=len(test))
-            rmse = np.sqrt(mean_squared_error(test, forecast))
-            mae = mean_absolute_error(test, forecast)
-            r2 = r2_score(test, forecast)
-            aic = self.model.aic()
-            bic = self.model.bic()
-            
-            return {
-                "model": self.model,
-                "rmse": rmse,
-                "mae": mae,
-                "r2": r2,
-                "aic": aic,
-                "bic": bic,
-                "is_seasonal": seasonal
+            # Initialize results structure
+            results = {
+                "actual_vs_predicted": {
+                    "labels": labels,
+                    "actual": ts_data[target_column].tolist(),
+                    "predicted": [None] * len(ts_data)
+                },
+                "forecast": {
+                    "labels": labels,
+                    "historical": ts_data[target_column].tolist(),
+                    "forecast": [None] * len(ts_data),
+                    "upper_bound": [None] * len(ts_data),
+                    "lower_bound": [None] * len(ts_data)
+                }
             }
             
+            # Add forecast data if available
+            if forecast and isinstance(forecast, dict):
+                # Combine historical and forecast data
+                historical = ts_data[target_column].tolist()
+                forecast_values = forecast.get('forecast', [])
+                forecast_index = forecast.get('forecast_index', [])
+                
+                # Create full series for visualization
+                full_series = historical + forecast_values
+                full_labels = labels + forecast_index
+                
+                # Update results
+                results["actual_vs_predicted"]["predicted"] = historical + forecast_values
+                results["actual_vs_predicted"]["labels"] = full_labels
+                
+                results["forecast"]["forecast"] = [None] * len(historical) + forecast_values
+                results["forecast"]["labels"] = full_labels
+                
+                # Add confidence intervals if available
+                if forecast.get('conf_int'):
+                    ci_lower = [x[0] for x in forecast['conf_int']]
+                    ci_upper = [x[1] for x in forecast['conf_int']]
+                    
+                    results["forecast"]["upper_bound"] = [None] * len(historical) + ci_upper
+                    results["forecast"]["lower_bound"] = [None] * len(historical) + ci_lower
+            
+            return results
+            
         except Exception as e:
-            raise ValueError(f"ARIMA modeling failed: {str(e)}")
-    
-    def generate_visualizations(self, df, target_column, forecast=None):
-        """Generates useful time-series graphs for ARIMA model visualization."""
-        graph_images = []
-
-        # Function to convert plot to Base64
-        def plot_to_base64():
-            img = io.BytesIO()
-            plt.savefig(img, format='png', bbox_inches='tight')
-            plt.close()
-            img.seek(0)
-            return base64.b64encode(img.getvalue()).decode('utf8')
-
-        # Time Series Plot
-        plt.figure(figsize=(10, 5))
-        plt.plot(df.index, df[target_column], label='Actual Sales', color='blue')
-        if forecast is not None:
-            plt.plot(forecast.index, forecast, label='Forecast', color='red', linestyle='dashed')
-        plt.title("Sales Over Time")
-        plt.xlabel("Time")
-        plt.ylabel("Sales")
-        plt.legend()
-        graph_images.append(plot_to_base64())
-
-        # Forecast Graphs
-        if forecast is not None:
-            plt.figure(figsize=(10, 5))
-            plt.plot(df.index, df[target_column], label='Actual Sales', color='blue')
-            plt.plot(forecast.index, forecast, label='Forecast', color='red', linestyle='dashed')
-            plt.fill_between(forecast.index, forecast * 0.95, forecast * 1.05, color='red', alpha=0.2)
-            plt.title("Sales Forecast with Confidence Interval")
-            plt.xlabel("Time")
-            plt.ylabel("Sales")
-            plt.legend()
-            graph_images.append(plot_to_base64())
-
-        # Decomposition Plot
-        decomposition = seasonal_decompose(df[target_column], model='additive', period=12)
-        fig, axes = plt.subplots(4, 1, figsize=(10, 8))
-        decomposition.observed.plot(ax=axes[0], title='Observed')
-        decomposition.trend.plot(ax=axes[1], title='Trend')
-        decomposition.seasonal.plot(ax=axes[2], title='Seasonality')
-        decomposition.resid.plot(ax=axes[3], title='Residuals')
-        plt.tight_layout()
-        graph_images.append(plot_to_base64())
-
-        # ACF & PACF Plots
-        fig, axes = plt.subplots(1, 2, figsize=(12, 4))
-        plot_acf(df[target_column].dropna(), ax=axes[0])
-        plot_pacf(df[target_column].dropna(), ax=axes[1])
-        axes[0].set_title("Autocorrelation Function (ACF)")
-        axes[1].set_title("Partial Autocorrelation Function (PACF)")
-        plt.tight_layout()
-        graph_images.append(plot_to_base64())
-
-        # Histogram of Sales Data
-        plt.figure(figsize=(6, 4))
-        sns.histplot(df[target_column], kde=True, bins=20, color='green')
-        plt.title(f"Distribution of {target_column}")
-        graph_images.append(plot_to_base64())
-
-        # Boxplot for Sales Data
-        plt.figure(figsize=(6, 4))
-        sns.boxplot(y=df[target_column], color='orange')
-        plt.title(f"Boxplot of {target_column}")
-        graph_images.append(plot_to_base64())
-
-        # Rolling Mean & Variance
-        rolling_window = 12
-        plt.figure(figsize=(10, 5))
-        plt.plot(df[target_column], label='Original', color='blue')
-        plt.plot(df[target_column].rolling(window=rolling_window).mean(), label='Rolling Mean', color='red')
-        plt.plot(df[target_column].rolling(window=rolling_window).std(), label='Rolling Std', color='black')
-        plt.title("Rolling Mean & Variance")
-        plt.legend()
-        graph_images.append(plot_to_base64())
-
-        # Residual Plot
-        plt.figure(figsize=(6, 4))
-        sns.histplot(decomposition.resid.dropna(), kde=True, color='purple')
-        plt.title("Residual Distribution")
-        graph_images.append(plot_to_base64())
-
-        # Scatter Plot: Sales vs Time
-        plt.figure(figsize=(10, 5))
-        plt.scatter(df.index, df[target_column], color='blue', alpha=0.5)
-        plt.title("Scatter Plot of Sales Over Time")
-        plt.xlabel("Time")
-        plt.ylabel("Sales")
-        plt.grid(True)
-        graph_images.append(plot_to_base64())
-
-        if hasattr(self.model, 'seasonal_order') and any(self.model.seasonal_order):
-            try:
-                # Seasonal decomposition with model's seasonal period
-                m = self.model.seasonal_order[-1]
-                decomposition = seasonal_decompose(df[target_column], model='additive', period=m)
-                
-                plt.figure(figsize=(10, 7))
-                plt.subplot(4, 1, 1)
-                plt.plot(decomposition.observed)
-                plt.title('Observed')
-                
-                plt.subplot(4, 1, 2)
-                plt.plot(decomposition.trend)
-                plt.title('Trend')
-                
-                plt.subplot(4, 1, 3)
-                plt.plot(decomposition.seasonal)
-                plt.title('Seasonal')
-                
-                plt.subplot(4, 1, 4)
-                plt.plot(decomposition.resid)
-                plt.title('Residual')
-                
-                plt.tight_layout()
-                graph_images.append(plot_to_base64())
-            except:
-                pass
-
-        return graph_images[:10]
-
-
-    # def generate_visualizations(self, df, target_column):
-    #     """Generates useful time-series graphs for ARIMA model visualization."""
-    #     graph_images = []
-
-    #     # Function to convert plot to Base64
-    #     def plot_to_base64():
-    #         img = io.BytesIO()
-    #         plt.savefig(img, format='png', bbox_inches='tight')
-    #         plt.close()
-    #         img.seek(0)
-    #         return base64.b64encode(img.getvalue()).decode('utf8')
-
-    #     # Time Series Plot
-    #     plt.figure(figsize=(10, 5))
-    #     plt.plot(df.index, df[target_column], label='Actual Sales', color='blue')
-    #     plt.title("Sales Over Time")
-    #     plt.xlabel("Time")
-    #     plt.ylabel("Sales")
-    #     plt.legend()
-    #     graph_images.append(plot_to_base64())
-
-    #     # Decomposition Plot
-    #     decomposition = seasonal_decompose(df[target_column], model='additive', period=12)
-    #     fig, axes = plt.subplots(4, 1, figsize=(10, 8))
-    #     decomposition.observed.plot(ax=axes[0], title='Observed')
-    #     decomposition.trend.plot(ax=axes[1], title='Trend')
-    #     decomposition.seasonal.plot(ax=axes[2], title='Seasonality')
-    #     decomposition.resid.plot(ax=axes[3], title='Residuals')
-    #     plt.tight_layout()
-    #     graph_images.append(plot_to_base64())
-
-    #     # ACF & PACF Plots
-    #     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
-    #     plot_acf(df[target_column].dropna(), ax=axes[0])
-    #     plot_pacf(df[target_column].dropna(), ax=axes[1])
-    #     axes[0].set_title("Autocorrelation Function (ACF)")
-    #     axes[1].set_title("Partial Autocorrelation Function (PACF)")
-    #     plt.tight_layout()
-    #     graph_images.append(plot_to_base64())
-
-    #     # Histogram of Sales Data
-    #     plt.figure(figsize=(6, 4))
-    #     sns.histplot(df[target_column], kde=True, bins=20, color='green')
-    #     plt.title(f"Distribution of {target_column}")
-    #     graph_images.append(plot_to_base64())
-
-    #     # Boxplot for Sales Data
-    #     plt.figure(figsize=(6, 4))
-    #     sns.boxplot(y=df[target_column], color='orange')
-    #     plt.title(f"Boxplot of {target_column}")
-    #     graph_images.append(plot_to_base64())
-
-    #     # Rolling Mean & Variance
-    #     rolling_window = 12
-    #     plt.figure(figsize=(10, 5))
-    #     plt.plot(df[target_column], label='Original', color='blue')
-    #     plt.plot(df[target_column].rolling(window=rolling_window).mean(), label='Rolling Mean', color='red')
-    #     plt.plot(df[target_column].rolling(window=rolling_window).std(), label='Rolling Std', color='black')
-    #     plt.title("Rolling Mean & Variance")
-    #     plt.legend()
-    #     graph_images.append(plot_to_base64())
-
-    #     # Residual Plot
-    #     plt.figure(figsize=(6, 4))
-    #     sns.histplot(decomposition.resid.dropna(), kde=True, color='purple')
-    #     plt.title("Residual Distribution")
-    #     graph_images.append(plot_to_base64())
-
-    #     # Scatter Plot: Sales vs Time
-    #     plt.figure(figsize=(10, 5))
-    #     plt.scatter(df.index, df[target_column], color='blue', alpha=0.5)
-    #     plt.title("Scatter Plot of Sales Over Time")
-    #     plt.xlabel("Time")
-    #     plt.ylabel("Sales")
-    #     plt.grid(True)
-    #     graph_images.append(plot_to_base64())
-
-    #     return graph_images[:10]
-
-
+            print(f"Visualization generation failed: {str(e)}")
+            return {
+                "actual_vs_predicted": {"labels": [], "actual": [], "predicted": []},
+                "forecast": {"labels": [], "historical": [], "forecast": [], "bounds": []}
+            }
 
 
 

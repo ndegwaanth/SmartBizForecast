@@ -261,6 +261,21 @@
 let columnStatsModal = null;
 let columnChart = null;
 
+document.getElementById('modelForm').addEventListener('submit', function(e) {
+    if (document.getElementById('{{ form.model_preferences.id }}').value === 'ARIMA') {
+        // Show warning for ARIMA
+        if (!confirm('ARIMA modeling may take several minutes. Continue?')) {
+            e.preventDefault();
+            return;
+        }
+        
+        // Show loading indicator
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Training ARIMA Model...';
+    }
+});
+
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('modelForm');
     

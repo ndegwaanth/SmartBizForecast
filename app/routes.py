@@ -238,6 +238,7 @@ The Support Team
     
     return render_template('forgot_pass.html', form=form)
 
+
 @main_bp.route('/model/prediction/results/', methods=['GET', 'POST'])
 def model_training():
     # Debug session state at start
@@ -341,39 +342,36 @@ def model_training():
                 
                 elif model_select == 'ARIMA':
                     try:
-                        df[target_variable] = pd.to_numeric(df[target_variable], errors='coerce')
-                        df.dropna(subset=[target_variable], inplace=True)
+                        # Limit data size if needed
+                        if len(df) > 1000:
+                            df = df.sample(1000, random_state=random_state)
+                            flash("Large dataset detected. Using random sample of 1000 rows for ARIMA modeling.", "info")
 
-                        model = sales.train_initial_model(df, target_variable, test_size, random_state)
-                        forecast = model.forecast(steps=len(df))
-
-                        metrics = {
-                            "RMSE": np.sqrt(mean_squared_error(df[target_variable].iloc[-len(forecast):], forecast)),
-                            "AIC": model.aic,
-                            "BIC": model.bic
-                        }
-
-                        model_summary = model.summary().as_text()
-                        graphs = sales.generate_visualizations(df, target_variable, forecast)
+                        result = sales.train_initial_model(
+                            df=df,
+                            target_column=target_variable,
+                            test_size=test_size,
+                            random_state=random_state
+                        )
                         
-                        flash("ARIMA model trained successfully!", "success")
+                        graph_data = sales.generate_visualizations(
+                            df=df,
+                            target_column=target_variable,
+                            forecast=result
+                        )
+                        
                         return render_template('sales.html', 
-                                            metrics=metrics, 
-                                            graphs=graphs, 
-                                            form=form,
-                                            model_summary=model_summary)
+                            metrics=result.get('metrics', {}),
+                            graph_data=graph_data,
+                            model_summary=result.get('summary', ''),
+                            form=form)
+                            
                     except Exception as e:
-                        flash(f"Error during ARIMA training: {str(e)}", "error")
+                        flash(f"ARIMA modeling failed: {str(e)}", "danger")
                         return redirect(url_for('main.model_training'))
-                
-                else:
-                    flash('Selected model type not implemented yet', 'warning')
-                    return redirect(url_for('main.model_training'))
-
             except Exception as e:
-                flash(f"Unexpected error during model training: {str(e)}", "error")
-                return redirect(url_for('main.model_training'))
-    
+                flash("Form not validateed")
+                print(f"Form not validated {e}")
     # For GET requests
     return render_template('prediction.html', 
                          form=form, 
